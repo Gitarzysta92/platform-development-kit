@@ -1,0 +1,13 @@
+# Vault Secrets Operator – Helm values
+# Chart: hashicorp/vault-secrets-operator
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
