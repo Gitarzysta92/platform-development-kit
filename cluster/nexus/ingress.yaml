@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexus-ingress
+  namespace: nexus
+  labels:
+    app: nexus
+    app.kubernetes.io/name: nexus
+    app.kubernetes.io/part-of: platform
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # Nexus UI / asset uploads can be large (components, docker layers, etc.)
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: nexus.host.placeholder # Overridden by environment overlay
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                # Service name is stabilized via `fullnameOverride: nexus` in `values.yaml`
+                name: nexus
+                port:
+                  number: 8081
+

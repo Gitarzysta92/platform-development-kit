@@ -1,0 +1,44 @@
+# Nexus Repository Manager OSS – Helm values
+# Chart: sonatype/nexus-repository-manager
+# Image: sonatype/nexus3
+#
+# This module is intended for single-node clusters (k3s + local-path).
+# Tune resources/heap for your node size.
+
+# Stabilize resource names (service/dep/pvc) so cluster ingress can reference `Service/nexus`.
+fullnameOverride: nexus
+
+nexus:
+  # Reduce defaults for small clusters (the chart defaults are very high).
+  env:
+    - name: INSTALL4J_ADD_VM_PARAMS
+      value: |-
+        -Xms1024m -Xmx1024m
+        -XX:MaxDirectMemorySize=1024m
+        -XX:+UnlockExperimentalVMOptions
+        -XX:+UseCGroupMemoryLimitForHeap
+        -Djava.util.prefs.userRoot=/nexus-data/javaprefs
+    - name: NEXUS_SECURITY_RANDOMPASSWORD
+      value: "true"
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1536Mi
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+
+# Managed by `cluster/nexus/ingress.yaml` (environment overlays patch hostnames).
+ingress:
+  enabled: false
+
+service:
+  enabled: true
+  type: ClusterIP
+
+persistence:
+  enabled: true
+  storageClass: "local-path"
+  storageSize: 20Gi
+

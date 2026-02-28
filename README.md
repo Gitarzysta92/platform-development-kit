@@ -8,6 +8,7 @@ This repo is intended to be consumed by *client/orchestrator* repositories (whic
 
 - `cluster/`: Kustomize bases and Helm values for platform modules (e.g. ArgoCD config base, RabbitMQ, MinIO, OpenSearch, OPA, etc.).
 - `host/`: Host provisioning (Ansible) for a single-node K3s + ingress + optional host-level reverse proxy, certs, DNS helpers, etc.
+- Included cluster modules also cover a universal artifact repository via **Nexus Repository Manager OSS** (`cluster/nexus`).
 
 ## Host provisioning (Ansible)
 
