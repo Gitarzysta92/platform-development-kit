@@ -17,6 +17,7 @@ The main playbook is `host/main.yml`.
 Important inputs (all can be passed via `-e`):
 - `platform_slug` (default `wapps`)
 - `base_domain` (default `wapps.ai`)
+- `base_domains` (optional) — list of base domains to expose (e.g. `["threesixty.dev","wapps.ai"]`). If set, host nginx + dnsmasq will generate rules for **all** of them. If omitted, it falls back to `base_domain`.
 - `target_env` (default `staging`)
 - `bootstrap_client_gitops` (default `false`) — legacy behavior toggle; in the target architecture the *client repo* bootstraps its ArgoCD `AppProject`/`App-of-Apps`.
 
@@ -30,6 +31,28 @@ resources:
 ```
 
 Client repos should keep environment-specific overlays (domains/hosts/replicas/image tags) under `environments/**` and ArgoCD `Application` objects under `argocd/**`.
+
+## WApps GitOps conventions (client repos)
+
+For WApps-style client repos (e.g. `wappsB`, analogous to `threesixty-platform`), use a **single workload namespace**:
+
+- **Namespace**
+  - Deploy *all* platform modules and application workloads into the `wapps` namespace.
+  - Keep Argo CD control-plane resources (Argo CD itself, `AppProject`, `Application` CRs) in the `argocd` namespace.
+
+- **Argo CD application “tags” (labels)**
+  - Add a tag label to every Argo CD `Application` (for filtering/grouping in the Argo CD UI):
+    - `wapps.ai/tag: platform | backend | frontend`
+  - Recommended standard labels:
+    - `app.kubernetes.io/name: <app-name>`
+    - `app.kubernetes.io/part-of: wapps`
+
+- **Repository layout**
+  - `argocd/applications/platform/**`: platform modules (MinIO, RabbitMQ, OpenSearch, OPA, etc.)
+  - `argocd/applications/backend/**`: backend services and agents
+  - `argocd/applications/frontend/**`: frontend portals/apps
+  - `environments/<env>/**`: environment overlays; set `namespace: wapps` in each `kustomization.yaml` overlay (except Argo CD itself).
+  - `environments/<env>/platform/namespaces-kustomization/**`: create only the `wapps` namespace.
 
 ## Vault (cluster) — bootstrap runbook (dev / manual unseal)
 

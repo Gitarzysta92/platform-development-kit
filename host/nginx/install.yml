@@ -113,7 +113,7 @@
 
 - name: Test reverse proxy
   shell: |
-    curl -s -o /dev/null -w "%{http_code}" http://argocd.{{ target_env }}.{{ base_domain }} || echo "Failed"
+    curl -s -o /dev/null -w "%{http_code}" http://argocd.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }} || echo "Failed"
   register: nginx_test_result
   changed_when: false
   failed_when: false
@@ -129,10 +129,10 @@
       ✅ Nginx reverse proxy configured successfully!
       
       🌐 Service URLs:
-      - ArgoCD: https://argocd.{{ target_env }}.{{ base_domain }}
-      - K3s API: https://k3s-api.{{ target_env }}.{{ base_domain }}
-      - Node Exporter: http://metrics.{{ target_env }}.{{ base_domain }}
-      - Cluster Services: https://any-service.{{ target_env }}.{{ base_domain }} (via ingress)
+      - ArgoCD: https://argocd.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
+      - K3s API: https://k3s-api.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
+      - Node Exporter: http://metrics.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
+      - Cluster Services: https://any-service.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }} (via ingress)
       - RabbitMQ AMQP: <host-ip>:5672 (TCP via nginx stream)
       
       🔧 Configuration:

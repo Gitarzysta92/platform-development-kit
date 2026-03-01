@@ -36,7 +36,7 @@
 
 - name: Test DNS resolution through systemd-resolved
   shell: |
-    nslookup argocd.{{ target_env }}.{{ base_domain }} 127.0.0.53
+    nslookup argocd.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }} 127.0.0.53
   register: dns_test_result
   changed_when: false
   failed_when: false
@@ -55,15 +55,15 @@
       {% if target_ip is defined and target_ip != "" %}
       ✅ DNS configuration completed successfully!
       
-      🌐 Wildcard DNS: *.{{ target_env }}.{{ base_domain }} → {{ target_ip }}
+      🌐 Wildcard DNS: *.{{ target_env }}.<base-domain> → {{ target_ip }}
       
       📍 Service URLs (all resolve to the same IP):
-      - ArgoCD: https://argocd.{{ target_env }}.{{ base_domain }}
-      - K3s API: https://k3s-api.{{ target_env }}.{{ base_domain }}
-      - Node Exporter: http://metrics.{{ target_env }}.{{ base_domain }}
-      - Grafana: https://grafana.{{ target_env }}.{{ base_domain }}
-      - Prometheus: https://prometheus.{{ target_env }}.{{ base_domain }}
-      - ANY service: https://anything.{{ target_env }}.{{ base_domain }}
+      - ArgoCD: https://argocd.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
+      - K3s API: https://k3s-api.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
+      - Node Exporter: http://metrics.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
+      - Grafana: https://grafana.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
+      - Prometheus: https://prometheus.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
+      - ANY service: https://anything.{{ target_env }}.{{ (base_domains | default([base_domain]))[0] }}
       
       🔧 DNS Server info:
       - systemd-resolved: 127.0.0.53:53 (stub listener)
@@ -74,7 +74,7 @@
       📋 How it works:
       1. Apps query 127.0.0.53:53 (systemd-resolved)
       2. systemd-resolved forwards to 127.0.0.1:5353 (dnsmasq)
-      3. dnsmasq resolves {{ target_env }}.{{ base_domain }} domains to {{ target_ip }}
+      3. dnsmasq resolves {{ target_env }}.<base-domain> domains to {{ target_ip }}
       4. Other domains are forwarded to 1.1.1.1 and 9.9.9.9
       {% else %}
       ❌ DNS configuration failed - missing target_ip variable

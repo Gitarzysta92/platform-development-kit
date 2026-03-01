@@ -12,10 +12,14 @@ log-queries
 log-dhcp
 log-facility=/var/log/dnsmasq.log
 
-# Only handle {{ target_env }}.{{ base_domain }} domain and subdomains
-# This will resolve ANY subdomain to the specified IP
-address=/{{ target_env }}.{{ base_domain }}/{{ target_ip }}
-address=/*.{{ target_env }}.{{ base_domain }}/{{ target_ip }}
+{% set domains = base_domains | default([base_domain]) %}
+
+# Only handle configured environment domains and subdomains.
+# This will resolve ANY subdomain under each suffix to the specified IP.
+{% for domain in domains %}
+address=/{{ target_env }}.{{ domain }}/{{ target_ip }}
+address=/*.{{ target_env }}.{{ domain }}/{{ target_ip }}
+{% endfor %}
 
 # Forward other queries to upstream DNS
 no-resolv
