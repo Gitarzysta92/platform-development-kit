@@ -7,6 +7,28 @@
 # External access: <host-ip>:5672 -> localhost:30567 (NodePort) -> rabbitmq.rabbitmq:5672
 # The RabbitMQ service is patched to NodePort 30567 via kustomization overlay
 stream {
+    # TLS passthrough on 443 (no host-level TLS termination).
+    # Routes by SNI to upstream TLS endpoints.
+    #
+    # Requires: ngx_stream_ssl_preread_module (typically present in nginx-full on Debian/Ubuntu).
+    #
+    map $ssl_preread_server_name $wapps_tls_upstream {
+        # K3s API is TLS on 6443 (NOTE: the certificate presented is K3s' own).
+        ~^k3s-api\..+$ 127.0.0.1:6443;
+
+        # Default: send all TLS to ingress-nginx HTTPS NodePort.
+        default         127.0.0.1:32443;
+    }
+
+    server {
+        listen 443;
+        ssl_preread on;
+        proxy_pass $wapps_tls_upstream;
+        proxy_timeout 3600s;
+        proxy_connect_timeout 10s;
+        error_log /var/log/nginx/tls-passthrough-443.error.log;
+    }
+
     upstream rabbitmq_amqp {
         server 127.0.0.1:30567;
     }

@@ -5,9 +5,14 @@ metadata:
   namespace: argocd
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
-    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - argocd.host.placeholder  # This will be overridden by environment overlays
+    secretName: argocd-tls
   rules:
   - host: argocd.host.placeholder  # This will be overridden by environment overlays
     http:

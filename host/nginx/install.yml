@@ -139,12 +139,11 @@
       - Environment: {{ target_env }}
       - Nginx Config: /etc/nginx/sites-available/{{ target_env }}-{{ platform_slug }}
       - Template: host/nginx/templates/nginx-site.conf.j2
-      - SSL Certificate: Provided by ACME (or self-signed fallback)
-      - Port: 80 (HTTP) and 443 (HTTPS)
+      - TLS: passthrough on 443 (termination in ingress)
+      - Port: 80 (HTTP proxy) and 443 (TCP passthrough)
       - Default routing: All unknown subdomains → Kubernetes cluster
       
       📋 Notes:
-      - All HTTP traffic redirects to HTTPS
-      - TLS certs are managed by `host/certificates/install.yml`
+      - HTTP redirects (if any) only point clients at ingress TLS
       - Unknown subdomains are routed to the Kubernetes cluster
       - Cluster services are handled by the ingress controller
