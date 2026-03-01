@@ -54,6 +54,42 @@ For WApps-style client repos (e.g. `wappsB`, analogous to `threesixty-platform`)
   - `environments/<env>/**`: environment overlays; set `namespace: wapps` in each `kustomization.yaml` overlay (except Argo CD itself).
   - `environments/<env>/platform/namespaces-kustomization/**`: create only the `wapps` namespace.
 
+## Shared platform namespace conventions (multi-tenant clusters)
+
+If you plan to run **many tenants/products** in the same cluster (e.g. `wapps`, `wirtualne-biuro`, …), a common model is:
+
+- **Namespaces**
+  - `argocd`: Argo CD control-plane + `Application`/`AppProject` objects
+  - `platform`: shared cluster platform modules (MinIO, RabbitMQ, OpenSearch, OPA, Vault, Nexus, cloudflared, etc.)
+  - `<tenant>`: per-tenant workloads only
+
+- **Important: disable per-module Namespace objects from PDK bases**
+  - Some PDK `cluster/**` bases include a `Namespace` manifest (e.g. `cluster/minio/namespace.yaml`, `cluster/rabbitmq/namespace.yaml`, …).
+  - If you want all shared platform resources in the `platform` namespace, you must **delete** those `Namespace` objects in your client repo overlay; otherwise Argo CD will keep recreating per-module namespaces.
+
+Example overlay pattern (delete the base namespace, deploy into `platform`):
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: platform
+
+resources:
+  - github.com/Gitarzysta92/platform-development-kit//cluster/minio?ref=main
+
+patches:
+  - target:
+      kind: Namespace
+      name: minio
+    patch: |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: minio
+      $patch: delete
+```
+
 ## Vault (cluster) — bootstrap runbook (dev / manual unseal)
 
 This repo provides:
@@ -63,16 +99,18 @@ This repo provides:
 
 After deploying Vault into the cluster:
 
+Set `VAULT_NAMESPACE` to the namespace where Vault is deployed (e.g. `vault` for per-module, or `platform` for shared platform).
+
 1) **Initialize** Vault (capture unseal keys + root token outside git)
 
 ```bash
-kubectl -n vault exec -it vault-0 -- vault operator init
+kubectl -n "$VAULT_NAMESPACE" exec -it vault-0 -- vault operator init
 ```
 
 2) **Unseal** Vault (repeat until unsealed)
 
 ```bash
-kubectl -n vault exec -it vault-0 -- vault operator unseal
+kubectl -n "$VAULT_NAMESPACE" exec -it vault-0 -- vault operator unseal
 ```
 
 3) **Enable KV + Kubernetes auth + create an example role**
@@ -87,7 +125,7 @@ Use the provided bootstrap job (`cluster/vault/bootstrap/vault-bootstrap-job.yam
 Create a test secret in Vault:
 
 ```bash
-kubectl -n vault exec -it vault-0 -- sh -lc 'export VAULT_ADDR=http://127.0.0.1:8200; vault kv put kv/argocd/admin username=admin password=changeme'
+kubectl -n "$VAULT_NAMESPACE" exec -it vault-0 -- sh -lc 'export VAULT_ADDR=http://127.0.0.1:8200; vault kv put kv/argocd/admin username=admin password=changeme'
 ```
 
 Then apply the VSO example and confirm it creates a Kubernetes `Secret` in `argocd`.
