@@ -21,6 +21,15 @@ Important inputs (all can be passed via `-e`):
 - `target_env` (default `staging`)
 - `bootstrap_client_gitops` (default `false`) — legacy behavior toggle; in the target architecture the *client repo* bootstraps its ArgoCD `AppProject`/`App-of-Apps`.
 
+### DNS options (host provisioning)
+There are two common DNS patterns:
+
+- **Local wildcard DNS (legacy / convenience)**: host runs dnsmasq locally (default `dnsmasq_port=5353`) and synthesizes `*.{{ target_env }}.<domain> -> <ip>` for each base domain.
+- **Tailscale Split DNS (recommended when using tailnet DNS)**:
+  - Tailscale admin console “Split DNS” routes your suffixes (e.g. `wapps.ai`, `threesixty.dev`) to a tailnet DNS server.
+  - That DNS server can run dnsmasq in **answer-all** mode (no hardcoded domains in the dnsmasq config), typically on port 53.
+  - See `host/dns/README.md` for the exact knobs and manual config.
+
 ## GitOps consumption (recommended)
 
 In a client repo, reference PDK bases as remote resources, pinned to a ref:
@@ -129,4 +138,10 @@ kubectl -n "$VAULT_NAMESPACE" exec -it vault-0 -- sh -lc 'export VAULT_ADDR=http
 ```
 
 Then apply the VSO example and confirm it creates a Kubernetes `Secret` in `argocd`.
+
+## ArgoCD ↔ GitHub integration (private repos)
+
+If you want ArgoCD to sync from **private** GitHub repositories, ArgoCD needs a PAT-based repo connection (password auth is not supported).
+
+See `cluster/argocd/argo-github-integration.md`.
 

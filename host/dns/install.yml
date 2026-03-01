@@ -4,11 +4,11 @@
     name: dnsmasq
     state: present
 
-# We don't need dnsmasq.d directory since we're using main config file only
+# We don't need dnsmasq.d directory since we're using a single config file.
 
-- name: Create main dnsmasq configuration
+- name: Create dnsmasq configuration
   template:
-    src: dnsmasq-main.conf.j2
+    src: "{{ 'dnsmasq-splitdns.conf.j2' if (dnsmasq_address_all | default(false)) else 'dnsmasq-main.conf.j2' }}"
     dest: /etc/dnsmasq.conf
     mode: '0644'
 
@@ -29,7 +29,7 @@
 
 - name: Wait for dnsmasq to start
   wait_for:
-    port: 5354
+    port: "{{ dnsmasq_port | default((dnsmasq_address_all | default(false)) | ternary(53, 5353)) }}"
     host: "127.0.0.1"
     timeout: 10
   ignore_errors: yes

@@ -5,6 +5,9 @@ interface=lo
 interface=tailscale0
 bind-dynamic
 
+{# dnsmasq default is 53; we keep 5353 as a safe default for local setups #}
+port={{ dnsmasq_port | default(5353) }}
+
 
 
 # Enable logging
