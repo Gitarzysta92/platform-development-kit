@@ -5,28 +5,36 @@ server:
   image:
     repository: hashicorp/vault
     tag: "1.17.3"
-  ha:
-    enabled: true
-    replicas: 1
   standalone:
     enabled: false
   dev:
     enabled: false
 
-  haRaft:
+  # IMPORTANT: Vault Helm chart v0.28.x uses `server.ha.raft.*`.
+  # If you set `server.haRaft.*`, the chart ignores it and falls back to the default HA config (`server.ha.config`),
+  # which uses Consul storage (`address = "HOST_IP:8500"`).
+  ha:
     enabled: true
-    config: |
-      ui = true
-      cluster_name = "wapps"
-      listener "tcp" {
-        address     = "0.0.0.0:8200"
-        tls_disable = 1
-      }
-      storage "raft" {
-        path = "/vault/data"
-      }
-      service_registration "kubernetes" {}
-      disable_mlock = true
+    replicas: 1
+    raft:
+      enabled: true
+      setNodeId: true
+      config: |
+        ui = true
+        cluster_name = "wapps"
+        disable_mlock = true
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+
+        storage "raft" {
+          path = "/vault/data"
+        }
+
+        service_registration "kubernetes" {}
 
   dataStorage:
     enabled: true
