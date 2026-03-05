@@ -1,0 +1,13 @@
+# VaultConnection for Vault Secrets Operator - same namespace as Vault (platform).
+# CRD installed by vault-secrets-operator Helm chart; applied here so vault-config sync creates it.
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultConnection
+metadata:
+  name: default
+  namespace: platform
+  labels:
+    app.kubernetes.io/name: vault-secrets-operator
+    app.kubernetes.io/component: vault-connection
+    app.kubernetes.io/part-of: platform
+spec:
+  address: http://vault.platform.svc.cluster.local:8200

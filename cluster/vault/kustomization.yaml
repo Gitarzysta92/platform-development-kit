@@ -4,4 +4,5 @@ namespace: platform
 resources:
   - ingress.yaml
   - init-unseal
+  - vault-connection.yaml
 
