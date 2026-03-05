@@ -2,6 +2,7 @@ global:
   enabled: true
 
 server:
+  enabled: true
   image:
     repository: hashicorp/vault
     tag: "1.17.3"
@@ -39,6 +40,7 @@ server:
   dataStorage:
     enabled: true
     size: 5Gi
+    mountPath: "/vault/data"
 
   service:
     type: ClusterIP
