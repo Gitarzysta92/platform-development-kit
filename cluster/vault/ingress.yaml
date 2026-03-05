@@ -2,10 +2,11 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: vault-ingress
-  namespace: vault
+  namespace: platform
   labels:
     app: vault
     app.kubernetes.io/name: vault
+    app.kubernetes.io/component: secrets-management
     app.kubernetes.io/part-of: platform
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
@@ -21,7 +22,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                # Service created by the Helm release (hashicorp/vault chart)
+                # Service from Vault Helm release (hashicorp/vault) in platform namespace
                 name: vault
                 port:
                   number: 8200

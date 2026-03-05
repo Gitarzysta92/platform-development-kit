@@ -3,16 +3,20 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: vault-init-unseal
-  namespace: vault
+  namespace: platform
   labels:
     app.kubernetes.io/name: vault-init-unseal
     app.kubernetes.io/component: vault
+    app.kubernetes.io/part-of: platform
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: vault-init-unseal
-  namespace: vault
+  namespace: platform
+  labels:
+    app.kubernetes.io/name: vault-init-unseal
+    app.kubernetes.io/part-of: platform
 rules:
   - apiGroups: [""]
     resources: [secrets]
@@ -22,7 +26,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: vault-init-unseal
-  namespace: vault
+  namespace: platform
+  labels:
+    app.kubernetes.io/name: vault-init-unseal
+    app.kubernetes.io/part-of: platform
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -30,7 +37,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: vault-init-unseal
-    namespace: vault
+    namespace: platform
 ---
 # One-shot Job: wait for Vault, init if needed, unseal, create vault-root-token.
 # Run once after Vault is deployed (e.g. manually or via a workflow).
@@ -39,9 +46,11 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: vault-init-unseal
-  namespace: vault
+  namespace: platform
   labels:
     app.kubernetes.io/name: vault-init-unseal
+    app.kubernetes.io/component: vault
+    app.kubernetes.io/part-of: platform
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
@@ -52,6 +61,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: vault-init-unseal
+        app.kubernetes.io/part-of: platform
     spec:
       serviceAccountName: vault-init-unseal
       restartPolicy: OnFailure
