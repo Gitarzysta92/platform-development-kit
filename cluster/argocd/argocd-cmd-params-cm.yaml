@@ -1,0 +1,14 @@
+# Shorter repo server cache so Kustomize remote bases (e.g. platform-development-kit) are re-fetched soon after pushes.
+# Default is 24h; 5m means vault-config and other apps see remote base updates within ~5 minutes.
+# Restart repo-server after changing (or wait for next rollout).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cmd-params-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Cache expiration for repo state, manifest generation, revision metadata (default 24h0m0s)
+  reposerver.repo.cache.expiration: "5m"

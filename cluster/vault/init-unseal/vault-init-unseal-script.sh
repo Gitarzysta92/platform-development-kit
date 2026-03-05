@@ -1,8 +1,16 @@
 #!/bin/sh
+# Vault init/unseal one-shot. Idempotent.
+# Env (all optional; defaults suit platform namespace):
+#   VAULT_ADDR     - Vault API URL (default: http://vault.platform.svc:8200)
+#   VAULT_NS       - Kubernetes namespace for Vault and secrets (default: platform)
+#   VAULT_CLI_VER  - Vault CLI version to download if missing (default: 1.17.3)
+#   VAULT_WAIT_N   - Max attempts (2s each) waiting for Vault to respond (default: 60 => 120s)
 set -e
 
 VAULT_ADDR="${VAULT_ADDR:-http://vault.platform.svc:8200}"
 VAULT_NS="${VAULT_NS:-platform}"
+VAULT_CLI_VER="${VAULT_CLI_VER:-1.17.3}"
+VAULT_WAIT_N="${VAULT_WAIT_N:-60}"
 export VAULT_ADDR
 
 # Install jq if missing (Alpine: apk, Debian: apt-get; skip if no pkg manager)
@@ -20,10 +28,9 @@ fi
 
 # Install Vault CLI if missing: use .tar.gz + tar (no unzip/apt-get required)
 if ! command -v vault >/dev/null 2>&1; then
-  echo "Installing Vault CLI..."
-  VAULT_VER="1.17.3"
-  VAULT_TGZ="vault_${VAULT_VER}_linux_amd64.tgz"
-  VAULT_URL="https://releases.hashicorp.com/vault/${VAULT_VER}/${VAULT_TGZ}"
+  echo "Installing Vault CLI ${VAULT_CLI_VER}..."
+  VAULT_TGZ="vault_${VAULT_CLI_VER}_linux_amd64.tgz"
+  VAULT_URL="https://releases.hashicorp.com/vault/${VAULT_CLI_VER}/${VAULT_TGZ}"
   if command -v curl >/dev/null 2>&1; then
     curl -sSL "$VAULT_URL" -o "/tmp/${VAULT_TGZ}"
   elif command -v wget >/dev/null 2>&1; then
@@ -36,12 +43,12 @@ if ! command -v vault >/dev/null 2>&1; then
   rm -f "/tmp/${VAULT_TGZ}"
 fi
 
-echo "Waiting for Vault at $VAULT_ADDR..."
-for i in $(seq 1 60); do
+echo "Waiting for Vault at $VAULT_ADDR (max ${VAULT_WAIT_N} attempts)..."
+for i in $(seq 1 "$VAULT_WAIT_N"); do
   if vault status -output=json 2>/dev/null | grep -q .; then
     break
   fi
-  if [ "$i" -eq 60 ]; then
+  if [ "$i" -eq "$VAULT_WAIT_N" ]; then
     echo "Vault did not become ready in time"
     exit 1
   fi
