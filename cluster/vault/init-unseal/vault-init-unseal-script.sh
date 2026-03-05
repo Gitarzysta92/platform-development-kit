@@ -5,21 +5,35 @@ VAULT_ADDR="${VAULT_ADDR:-http://vault.platform.svc:8200}"
 VAULT_NS="${VAULT_NS:-platform}"
 export VAULT_ADDR
 
-# Install deps (script runs in bitnami/kubectl or similar; may have curl but not wget)
+# Install jq if missing (Alpine: apk, Debian: apt-get; skip if no pkg manager)
 if ! command -v jq >/dev/null 2>&1; then
-  apt-get update -qq && apt-get install -y -qq jq ca-certificates >/dev/null
+  if command -v apk >/dev/null 2>&1; then
+    apk add --no-cache jq >/dev/null
+  elif command -v apt-get >/dev/null 2>&1; then
+    apt-get update -qq && apt-get install -y -qq jq >/dev/null
+  fi
 fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq not found and no package manager (apk/apt-get). Install jq in the image or use an image that has it."
+  exit 1
+fi
+
+# Install Vault CLI if missing: use .tar.gz + tar (no unzip/apt-get required)
 if ! command -v vault >/dev/null 2>&1; then
   echo "Installing Vault CLI..."
-  if ! command -v curl >/dev/null 2>&1; then
-    apt-get update -qq && apt-get install -y -qq curl unzip ca-certificates >/dev/null
+  VAULT_VER="1.17.3"
+  VAULT_TGZ="vault_${VAULT_VER}_linux_amd64.tgz"
+  VAULT_URL="https://releases.hashicorp.com/vault/${VAULT_VER}/${VAULT_TGZ}"
+  if command -v curl >/dev/null 2>&1; then
+    curl -sSL "$VAULT_URL" -o "/tmp/${VAULT_TGZ}"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q "$VAULT_URL" -O "/tmp/${VAULT_TGZ}"
+  else
+    echo "Neither curl nor wget found. Use an image that has curl or wget."
+    exit 1
   fi
-  if ! command -v unzip >/dev/null 2>&1; then
-    apt-get update -qq && apt-get install -y -qq unzip >/dev/null
-  fi
-  curl -sSL "https://releases.hashicorp.com/vault/1.17.3/vault_1.17.3_linux_amd64.zip" -o /tmp/vault.zip
-  unzip -o -q /tmp/vault.zip -d /tmp && mv /tmp/vault /usr/local/bin/vault && chmod +x /usr/local/bin/vault
-  rm -f /tmp/vault.zip
+  tar -xzf "/tmp/${VAULT_TGZ}" -C /tmp && mv /tmp/vault /usr/local/bin/vault && chmod +x /usr/local/bin/vault
+  rm -f "/tmp/${VAULT_TGZ}"
 fi
 
 echo "Waiting for Vault at $VAULT_ADDR..."
