@@ -5,13 +5,19 @@ VAULT_ADDR="${VAULT_ADDR:-http://vault.platform.svc:8200}"
 VAULT_NS="${VAULT_NS:-platform}"
 export VAULT_ADDR
 
-# Install deps (script runs in bitnami/kubectl or similar; has apt-get)
+# Install deps (script runs in bitnami/kubectl or similar; may have curl but not wget)
 if ! command -v jq >/dev/null 2>&1; then
-  apt-get update -qq && apt-get install -y -qq jq wget unzip ca-certificates >/dev/null
+  apt-get update -qq && apt-get install -y -qq jq ca-certificates >/dev/null
 fi
 if ! command -v vault >/dev/null 2>&1; then
   echo "Installing Vault CLI..."
-  wget -q "https://releases.hashicorp.com/vault/1.17.3/vault_1.17.3_linux_amd64.zip" -O /tmp/vault.zip
+  if ! command -v curl >/dev/null 2>&1; then
+    apt-get update -qq && apt-get install -y -qq curl unzip ca-certificates >/dev/null
+  fi
+  if ! command -v unzip >/dev/null 2>&1; then
+    apt-get update -qq && apt-get install -y -qq unzip >/dev/null
+  fi
+  curl -sSL "https://releases.hashicorp.com/vault/1.17.3/vault_1.17.3_linux_amd64.zip" -o /tmp/vault.zip
   unzip -o -q /tmp/vault.zip -d /tmp && mv /tmp/vault /usr/local/bin/vault && chmod +x /usr/local/bin/vault
   rm -f /tmp/vault.zip
 fi
