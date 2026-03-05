@@ -4,4 +4,5 @@ namespace: vault
 resources:
   - namespace.yaml
   - ingress.yaml
+  - init-unseal
 

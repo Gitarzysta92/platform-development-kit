@@ -1,0 +1,75 @@
+# ServiceAccount and RBAC for the init-unseal job (needs to create/read secrets in the same namespace as Vault).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-init-unseal
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-init-unseal
+    app.kubernetes.io/component: vault
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init-unseal
+  namespace: vault
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, create, patch, update]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init-unseal
+  namespace: vault
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init-unseal
+subjects:
+  - kind: ServiceAccount
+    name: vault-init-unseal
+    namespace: vault
+---
+# One-shot Job: wait for Vault, init if needed, unseal, create vault-root-token.
+# Run once after Vault is deployed (e.g. manually or via a workflow).
+# Idempotent: safe to re-run (no-op if already initialized and unsealed).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init-unseal
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-init-unseal
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vault-init-unseal
+    spec:
+      serviceAccountName: vault-init-unseal
+      restartPolicy: OnFailure
+      containers:
+        - name: init-unseal
+          image: bitnami/kubectl:latest
+          env:
+            - name: VAULT_ADDR
+              value: "http://vault.platform.svc:8200"
+            - name: VAULT_NS
+              value: "platform"
+          command: ["/bin/sh", "/scripts/script.sh"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: vault-init-unseal-script
+            defaultMode: 0755
