@@ -5,9 +5,3 @@ namespace: platform
 
 resources:
   - vault-init-unseal-job.yaml
-
-# No disableNameSuffixHash: script changes get a new ConfigMap name (hash suffix), so resync always runs Job with latest script
-configMapGenerator:
-  - name: vault-init-unseal-script
-    files:
-      - script.sh=vault-init-unseal-script.sh

@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'images/vault-init-unseal/**'
+      - 'cluster/vault/init-unseal/vault-init-unseal-script.sh'
       - '.github/workflows/vault-init-unseal-image.workflow.yml'
       - '.github/actions/build-and-push/**'
   workflow_dispatch:
@@ -31,7 +32,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           image-name: ${{ env.IMAGE_NAME }}
-          context-path: images/vault-init-unseal
+          context-path: .
           dockerfile-path: images/vault-init-unseal/Dockerfile
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

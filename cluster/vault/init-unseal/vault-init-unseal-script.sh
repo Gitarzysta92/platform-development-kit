@@ -19,9 +19,18 @@ for tool in vault kubectl jq; do
   fi
 done
 
+# If the Service has no ready endpoints yet (common when Vault is sealed/uninitialized),
+# fall back to the Pod IP so we can initialize/unseal even while NotReady.
+VAULT_POD="${VAULT_POD:-vault-0}"
+POD_IP="$(kubectl get pod -n "$VAULT_NS" "$VAULT_POD" -o jsonpath='{.status.podIP}' 2>/dev/null || true)"
+if [ -n "$POD_IP" ]; then
+  VAULT_ADDR="http://${POD_IP}:8200"
+  export VAULT_ADDR
+fi
+
 echo "Waiting for Vault at $VAULT_ADDR (max ${VAULT_WAIT_N} attempts)..."
 for i in $(seq 1 "$VAULT_WAIT_N"); do
-  if vault status -output=json 2>/dev/null | grep -q .; then
+  if vault status -format=json 2>/dev/null | grep -q .; then
     break
   fi
   if [ "$i" -eq "$VAULT_WAIT_N" ]; then
@@ -34,8 +43,8 @@ done
 echo "Vault is reachable."
 
 # Parse status
-INITIALIZED=$(vault status -output=json 2>/dev/null | grep -o '"initialized":[^,]*' | cut -d: -f2 | tr -d ' ')
-SEALED=$(vault status -output=json 2>/dev/null | grep -o '"sealed":[^,]*' | cut -d: -f2 | tr -d ' ')
+INITIALIZED=$(vault status -format=json 2>/dev/null | grep -o '"initialized":[^,]*' | cut -d: -f2 | tr -d ' ')
+SEALED=$(vault status -format=json 2>/dev/null | grep -o '"sealed":[^,]*' | cut -d: -f2 | tr -d ' ')
 
 if [ "$INITIALIZED" = "false" ]; then
   echo "Vault not initialized. Running init..."

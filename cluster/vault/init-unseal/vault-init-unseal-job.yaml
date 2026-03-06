@@ -21,6 +21,9 @@ rules:
   - apiGroups: [""]
     resources: [secrets]
     verbs: [get, list, create, patch, update]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -68,18 +71,10 @@ spec:
       containers:
         - name: init-unseal
           image: ghcr.io/gitarzysta92/platform-development-kit/vault-init-unseal:latest
+          imagePullPolicy: Always
           env:
             - name: VAULT_ADDR
               value: "http://vault.platform.svc:8200"
             - name: VAULT_NS
               value: "platform"
-          command: ["/bin/sh", "/scripts/script.sh"]
-          volumeMounts:
-            - name: script
-              mountPath: /scripts
-              readOnly: true
-      volumes:
-        - name: script
-          configMap:
-            name: vault-init-unseal-script
-            defaultMode: 0755
+          command: ["/usr/local/bin/vault-init-unseal"]
