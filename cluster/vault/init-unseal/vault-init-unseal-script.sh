@@ -11,16 +11,13 @@ VAULT_NS="${VAULT_NS:-platform}"
 VAULT_WAIT_N="${VAULT_WAIT_N:-60}"
 export VAULT_ADDR
 
-# Image is hashicorp/vault - vault CLI is already present. Install jq and kubectl only.
-if ! command -v jq >/dev/null 2>&1; then
-  apk add --no-cache jq >/dev/null
-fi
-if ! command -v kubectl >/dev/null 2>&1; then
-  echo "Installing kubectl..."
-  KUBECTL_VER="v1.28.0"
-  curl -sSL -o /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VER}/bin/linux/amd64/kubectl"
-  chmod +x /tmp/kubectl && mv /tmp/kubectl /usr/local/bin/kubectl
-fi
+# This job is expected to run in the custom toolbox image (vault + kubectl + jq).
+for tool in vault kubectl jq; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "Required tool '$tool' not found in image. Use the vault-init-unseal toolbox image."
+    exit 1
+  fi
+done
 
 echo "Waiting for Vault at $VAULT_ADDR (max ${VAULT_WAIT_N} attempts)..."
 for i in $(seq 1 "$VAULT_WAIT_N"); do

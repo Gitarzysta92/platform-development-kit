@@ -1,0 +1,52 @@
+# Build & push the vault-init-unseal toolbox image to GHCR.
+# Keep package public in GHCR UI (first publish may default to private depending on repo settings).
+name: 'Vault init-unseal - Build Image'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'images/vault-init-unseal/**'
+      - '.github/workflows/vault-init-unseal-image.workflow.yml'
+      - '.github/actions/build-and-push/**'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: gitarzysta92/platform-development-kit/vault-init-unseal
+
+jobs:
+  build:
+    name: 'Build Docker Image'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and push Docker image
+        uses: ./.github/actions/build-and-push
+        with:
+          registry: ${{ env.REGISTRY }}
+          image-name: ${{ env.IMAGE_NAME }}
+          context-path: images/vault-init-unseal
+          dockerfile-path: images/vault-init-unseal/Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/Gitarzysta92/platform-development-kit
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=vault-init-unseal
+            org.opencontainers.image.description=Toolbox image for Vault init/unseal Job (vault + kubectl + jq)
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image pushed
+        run: |
+          echo "✅ Image built and pushed:"
+          echo "  - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo "  - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
