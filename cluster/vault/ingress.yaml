@@ -9,11 +9,16 @@ metadata:
     app.kubernetes.io/component: secrets-management
     app.kubernetes.io/part-of: platform
   annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - vault.host.placeholder # Overridden by environment overlay
+      secretName: vault-ingress-tls
   rules:
     - host: vault.host.placeholder # Overridden by environment overlay
       http:
