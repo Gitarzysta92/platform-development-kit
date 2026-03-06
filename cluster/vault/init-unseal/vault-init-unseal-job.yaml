@@ -67,7 +67,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: init-unseal
-          image: bitnami/kubectl:latest
+          image: hashicorp/vault:1.17.3
           env:
             - name: VAULT_ADDR
               value: "http://vault.platform.svc:8200"

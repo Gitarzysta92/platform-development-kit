@@ -3,44 +3,23 @@
 # Env (all optional; defaults suit platform namespace):
 #   VAULT_ADDR     - Vault API URL (default: http://vault.platform.svc:8200)
 #   VAULT_NS       - Kubernetes namespace for Vault and secrets (default: platform)
-#   VAULT_CLI_VER  - Vault CLI version to download if missing (default: 1.17.3)
 #   VAULT_WAIT_N   - Max attempts (2s each) waiting for Vault to respond (default: 60 => 120s)
 set -e
 
 VAULT_ADDR="${VAULT_ADDR:-http://vault.platform.svc:8200}"
 VAULT_NS="${VAULT_NS:-platform}"
-VAULT_CLI_VER="${VAULT_CLI_VER:-1.17.3}"
 VAULT_WAIT_N="${VAULT_WAIT_N:-60}"
 export VAULT_ADDR
 
-# Install jq if missing (Alpine: apk, Debian: apt-get; skip if no pkg manager)
+# Image is hashicorp/vault - vault CLI is already present. Install jq and kubectl only.
 if ! command -v jq >/dev/null 2>&1; then
-  if command -v apk >/dev/null 2>&1; then
-    apk add --no-cache jq >/dev/null
-  elif command -v apt-get >/dev/null 2>&1; then
-    apt-get update -qq && apt-get install -y -qq jq >/dev/null
-  fi
+  apk add --no-cache jq >/dev/null
 fi
-if ! command -v jq >/dev/null 2>&1; then
-  echo "jq not found and no package manager (apk/apt-get). Install jq in the image or use an image that has it."
-  exit 1
-fi
-
-# Install Vault CLI if missing: use .tar.gz + tar (no unzip/apt-get required)
-if ! command -v vault >/dev/null 2>&1; then
-  echo "Installing Vault CLI ${VAULT_CLI_VER}..."
-  VAULT_TGZ="vault_${VAULT_CLI_VER}_linux_amd64.tgz"
-  VAULT_URL="https://releases.hashicorp.com/vault/${VAULT_CLI_VER}/${VAULT_TGZ}"
-  if command -v curl >/dev/null 2>&1; then
-    curl -sSL "$VAULT_URL" -o "/tmp/${VAULT_TGZ}"
-  elif command -v wget >/dev/null 2>&1; then
-    wget -q "$VAULT_URL" -O "/tmp/${VAULT_TGZ}"
-  else
-    echo "Neither curl nor wget found. Use an image that has curl or wget."
-    exit 1
-  fi
-  tar -xzf "/tmp/${VAULT_TGZ}" -C /tmp && mv /tmp/vault /usr/local/bin/vault && chmod +x /usr/local/bin/vault
-  rm -f "/tmp/${VAULT_TGZ}"
+if ! command -v kubectl >/dev/null 2>&1; then
+  echo "Installing kubectl..."
+  KUBECTL_VER="v1.28.0"
+  curl -sSL -o /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VER}/bin/linux/amd64/kubectl"
+  chmod +x /tmp/kubectl && mv /tmp/kubectl /usr/local/bin/kubectl
 fi
 
 echo "Waiting for Vault at $VAULT_ADDR (max ${VAULT_WAIT_N} attempts)..."
