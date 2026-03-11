@@ -7,6 +7,8 @@ resources:
   - namespace.yaml
   - ingress.yaml
 
-# Note: Nexus Repository Manager is installed via Helm chart (sonatype/nexus-repository-manager).
-# Client repos should create an ArgoCD Application with a Helm source and reference `values.yaml` from this module.
+# Note: This base manages namespace + ingress only.
+# Use `cluster/nexus/argo-application` to consume the reusable ArgoCD Application
+# (Helm source + pinned chart version + shared values file).
+# Remote consumption uses Kustomize Git URL syntax: `<repo>//<path-in-repo>?ref=<branch|tag|sha>`.
 

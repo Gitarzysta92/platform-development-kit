@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nexus
+  namespace: platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    description: "Sonatype Nexus Repository (GitOps-managed Helm deployment)"
+spec:
+  project: default
+  sources:
+    - repoURL: https://sonatype.github.io/helm3-charts/
+      chart: nexus-repository-manager
+      targetRevision: 64.2.0
+      helm:
+        releaseName: nexus
+        valueFiles:
+          - $values/cluster/nexus/values.yaml
+    - repoURL: https://github.com/Gitarzysta92/platform-development-kit.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

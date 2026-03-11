@@ -39,6 +39,9 @@ resources:
   - github.com/Gitarzysta92/platform-development-kit//cluster/minio?ref=main
 ```
 
+Note: this is Kustomize Git URL syntax: `<repo>//<path-in-repo>?ref=<branch|tag|sha>`.
+The double slash `//` is intentional and separates repository root from a subdirectory inside that repository.
+
 Client repos should keep environment-specific overlays (domains/hosts/replicas/image tags) under `environments/**` and ArgoCD `Application` objects under `argocd/**`.
 
 ## WApps GitOps conventions (client repos)
