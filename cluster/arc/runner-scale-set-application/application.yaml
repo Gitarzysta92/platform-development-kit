@@ -1,12 +1,12 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: arc-runner-set
+  name: arc-runner-set-client
   namespace: platform
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    description: "Actions Runner Controller (ARC) - runner scale set"
+    description: "Actions Runner Controller (ARC) - runner scale set (client template)"
     argocd.argoproj.io/sync-wave: "20"
 spec:
   project: default
@@ -16,16 +16,17 @@ spec:
     targetRevision: 0.12.1
     helm:
       valuesObject:
-        githubConfigUrl: https://github.com/example/example-repo
+        githubConfigUrl: https://github.com/example/client-repo
         githubConfigSecret:
-          secretRef: arc-github-auth
+          secretRef: arc-github-auth-client
+        runnerScaleSetName: arc-runner-set-client
         minRunners: 1
         maxRunners: 4
         containerMode:
           type: dind
   destination:
     server: https://kubernetes.default.svc
-    namespace: arc-runners
+    namespace: client
   syncPolicy:
     automated:
       prune: true

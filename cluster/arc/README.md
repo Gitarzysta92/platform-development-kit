@@ -14,8 +14,11 @@ Use the same split as other platform modules:
 1. `argocd/...` consumes `cluster/arc/argo-application` (controller).
 2. `environments/...` consumes `cluster/arc/runner-scale-set-application` and patches:
    - `spec.project`
+   - `metadata.name` (recommended: `arc-runner-set-<client>`)
+   - `spec.destination.namespace` (recommended: `<client>`)
    - `githubConfigUrl`
-   - `githubConfigSecret.secretRef`
+   - `githubConfigSecret.secretRef` (recommended: `arc-github-auth-<client>`)
+   - `runnerScaleSetName` (recommended: `arc-runner-set-<client>`)
    - sizing (`minRunners`, `maxRunners`)
 
 ## Required Kubernetes secret
@@ -23,7 +26,7 @@ Use the same split as other platform modules:
 Create a secret in the runner namespace (default `arc-runners`) before syncing runner set:
 
 ```bash
-kubectl -n arc-runners create secret generic arc-github-auth \
+kubectl -n <client> create secret generic arc-github-auth-<client> \
   --from-literal=github_token='<github_pat>'
 ```
 
