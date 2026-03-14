@@ -5,6 +5,25 @@
     dest: /tmp/k3s-install.sh
     mode: '0755'
 
+- name: Ensure K3s config directory exists
+  file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+
+- name: Configure kubelet eviction and image GC guardrails
+  copy:
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0644'
+    content: |
+      kubelet-arg:
+        - "eviction-hard=nodefs.available<10%,imagefs.available<10%,nodefs.inodesFree<5%,imagefs.inodesFree<5%"
+        - "eviction-soft=nodefs.available<15%,imagefs.available<15%"
+        - "eviction-soft-grace-period=nodefs.available=2m,imagefs.available=2m"
+        - "eviction-max-pod-grace-period=30"
+        - "image-gc-high-threshold=75"
+        - "image-gc-low-threshold=60"
+
 - name: Install K3s server
   shell: INSTALL_K3S_EXEC="server --disable traefik" /tmp/k3s-install.sh --write-kubeconfig-mode 644
   args:
