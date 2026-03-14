@@ -16,7 +16,7 @@ spec:
     targetRevision: 0.12.1
   destination:
     server: https://kubernetes.default.svc
-    namespace: arc-systems
+    namespace: platform
   syncPolicy:
     automated:
       prune: true

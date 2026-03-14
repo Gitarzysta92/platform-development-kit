@@ -20,6 +20,9 @@ spec:
         githubConfigSecret:
           secretRef: arc-github-auth-client
         runnerScaleSetName: arc-runner-set-client
+        controllerServiceAccount:
+          namespace: platform
+          name: arc-controller-gha-rs-controller
         minRunners: 1
         maxRunners: 4
         containerMode:
