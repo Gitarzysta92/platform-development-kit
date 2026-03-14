@@ -29,6 +29,15 @@ nexus:
       cpu: 1000m
       memory: 2048Mi
 
+  # Expose Docker registry connectors on dedicated ports.
+  # Connector itself must still be enabled per repository in Nexus UI.
+  docker:
+    enabled: true
+    registries:
+      - host: "*.nexus.dev.threesixty.dev"
+        port: 5001
+        secretName: nexus-ingress-tls
+
 # Managed by `cluster/nexus/ingress.yaml` (environment overlays patch hostnames).
 ingress:
   enabled: false
