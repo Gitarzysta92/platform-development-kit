@@ -21,6 +21,13 @@ HCL and shell logic are kept outside manifests:
 kubectl apply -k cluster/vault/bootstrap
 ```
 
+## Kubernetes auth notes
+
+- The bootstrap script configures Kubernetes auth **without** `token_reviewer_jwt`.
+- This avoids pinning a short-lived token from a one-shot bootstrap Pod.
+- Vault will use its own in-cluster ServiceAccount token for TokenReview calls.
+- Ensure Vault server ServiceAccount has `system:auth-delegator` permissions.
+
 ## Tenant-safe VSO authz parameters
 
 The Job supports these env vars (defaults shown in manifest):

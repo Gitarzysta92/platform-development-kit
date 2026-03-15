@@ -143,6 +143,10 @@ This does:
 - configure ArgoCD policy/role (`argocd` from `cluster/vault/bootstrap/policies/argocd.hcl`)
 - optionally configure tenant-scoped VSO authz (policy/role) from env parameters in the Job
 
+Important:
+- Kubernetes auth is configured without `token_reviewer_jwt` so Vault uses its own in-cluster ServiceAccount token.
+- Ensure the Vault server ServiceAccount is bound to `system:auth-delegator`.
+
 For tenant onboarding, use the pattern documented in `cluster/vault/bootstrap/README.md` (unique `POLICY_NAME`, `ROLE_NAME`, `PATH_PREFIX`, `TENANT_NAMESPACE`).
 
 4) **Test VSO sync**
