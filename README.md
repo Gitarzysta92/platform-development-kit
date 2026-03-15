@@ -108,6 +108,10 @@ This repo provides:
 - Vault Helm values: `cluster/vault/values.yaml` (raft storage, UI enabled)
 - Vault ingress base: `cluster/vault/ingress.yaml` (host patched by client repo overlay)
 - VSO example: `cluster/vault-secrets-operator/examples/secretstore-argocd.yaml`
+- File-based bootstrap package: `cluster/vault/bootstrap/`
+  - scripts: `vault-bootstrap-script.sh`, `configure-vso-authz.sh`
+  - policy files: `cluster/vault/bootstrap/policies/*.hcl`
+  - job + configmap generator: `cluster/vault/bootstrap/kustomization.yaml`
 
 After deploying Vault into the cluster:
 
@@ -125,12 +129,21 @@ kubectl -n "$VAULT_NAMESPACE" exec -it vault-0 -- vault operator init
 kubectl -n "$VAULT_NAMESPACE" exec -it vault-0 -- vault operator unseal
 ```
 
-3) **Enable KV + Kubernetes auth + create an example role**
+3) **Enable KV + Kubernetes auth + create roles/policies from files**
 
-Use the provided bootstrap job (`cluster/vault/bootstrap/vault-bootstrap-job.yaml`) as a reference for:
-- enabling KV v2 at `kv`
-- enabling Kubernetes auth at mount `kubernetes`
-- creating policy/role for ArgoCD (`argocd-server` service account)
+Apply the bootstrap package:
+
+```bash
+kubectl apply -k cluster/vault/bootstrap
+```
+
+This does:
+- enable KV v2 at `kv`
+- enable Kubernetes auth at mount `kubernetes`
+- configure ArgoCD policy/role (`argocd` from `cluster/vault/bootstrap/policies/argocd.hcl`)
+- optionally configure tenant-scoped VSO authz (policy/role) from env parameters in the Job
+
+For tenant onboarding, use the pattern documented in `cluster/vault/bootstrap/README.md` (unique `POLICY_NAME`, `ROLE_NAME`, `PATH_PREFIX`, `TENANT_NAMESPACE`).
 
 4) **Test VSO sync**
 

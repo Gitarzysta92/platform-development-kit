@@ -5,4 +5,3 @@ path "kv/data/argocd/*" {
 path "kv/metadata/argocd/*" {
   capabilities = ["read"]
 }
-
