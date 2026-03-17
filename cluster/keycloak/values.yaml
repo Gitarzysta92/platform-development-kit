@@ -1,0 +1,40 @@
+auth:
+  adminUser: admin
+  # Replace in-cluster (secret management) before production usage.
+  adminPassword: "change-me-keycloak-admin"
+
+proxyHeaders: xforwarded
+httpEnabled: true
+
+production: false
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+postgresql:
+  enabled: true
+  auth:
+    username: keycloak
+    password: "change-me-keycloak-db"
+    database: keycloak
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hostname: keycloak.dev.threesixty.dev
+  path: /
+  pathType: Prefix
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  tls: true
+
