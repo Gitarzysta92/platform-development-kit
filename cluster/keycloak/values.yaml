@@ -1,7 +1,12 @@
+image:
+  registry: docker.io
+  repository: bitnamilegacy/keycloak
+  pullPolicy: IfNotPresent
+
 auth:
   adminUser: admin
-  # Replace in-cluster (secret management) before production usage.
-  adminPassword: "change-me-keycloak-admin"
+  existingSecret: keycloak-admin-credentials
+  passwordSecretKey: KEYCLOAK_ADMIN_PASSWORD
 
 proxyHeaders: xforwarded
 httpEnabled: true
@@ -18,10 +23,17 @@ resources:
 
 postgresql:
   enabled: true
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+    pullPolicy: IfNotPresent
   auth:
     username: keycloak
-    password: "change-me-keycloak-db"
     database: keycloak
+    existingSecret: keycloak-postgresql-auth
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
   primary:
     persistence:
       enabled: true
@@ -31,6 +43,17 @@ ingress:
   enabled: true
   ingressClassName: nginx
   hostname: keycloak.dev.threesixty.dev
+  path: /
+  pathType: Prefix
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  tls: true
+
+adminIngress:
+  enabled: true
+  ingressClassName: nginx
+  hostname: keycloak-admin.dev.threesixty.dev
   path: /
   pathType: Prefix
   annotations:
