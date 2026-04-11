@@ -3,8 +3,7 @@
 This module provides base Vault resources consumed by client overlays:
 
 - `values.yaml` (Helm values)
-- `ingress.yaml` (base ingress, host patched by client repo)
-- `vault-connection.yaml` (VSO connection helper)
+- `config/` — `ingress.yaml` (base ingress, host patched by client repo), `vault-connection.yaml` (VSO connection helper), `vault-auth-delegator.yaml`; referenced as `//cluster/vault/config` for overlays that must not pull `init-unseal`
 - `init-unseal/` (idempotent init/unseal hook job)
 - `bootstrap/` (post-unseal Vault config: auth methods, policies, roles)
 - `policies/` (versioned Vault policy files, `.hcl`)
