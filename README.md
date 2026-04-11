@@ -106,7 +106,7 @@ patches:
 
 This repo provides:
 - Vault Helm values: `cluster/vault/values.yaml` (raft storage, UI enabled)
-- Vault ingress / VSO connection base: `cluster/vault/config/` (host and `VaultConnection` address patched by client repo overlay)
+- Vault ingress / VSO connection base: `cluster/vault/vault-config/` (host and `VaultConnection` address patched by client repo overlay; URL `//cluster/vault/vault-config`)
 - VSO example: `cluster/vault-secrets-operator/examples/secretstore-argocd.yaml`
 - File-based bootstrap package: `cluster/vault/bootstrap/`
   - scripts: `vault-bootstrap-script.sh`, `configure-vso-authz.sh`

@@ -12,7 +12,7 @@ RUN apk add --no-cache ca-certificates curl jq && update-ca-certificates
 RUN curl -sSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" && \
     chmod +x /usr/local/bin/kubectl
 
-COPY cluster/vault/init-unseal/vault-init-unseal-script.sh /usr/local/bin/vault-init-unseal
+COPY cluster/vault/vault-unseal/vault-init-unseal-script.sh /usr/local/bin/vault-init-unseal
 RUN chmod +x /usr/local/bin/vault-init-unseal
 
 ENTRYPOINT ["/usr/local/bin/vault-init-unseal"]

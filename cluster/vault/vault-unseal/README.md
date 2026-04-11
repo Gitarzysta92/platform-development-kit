@@ -1,17 +1,17 @@
 # Vault init and unseal (automated)
 
-This directory defines a **one-shot Job** that, when the vault-config app is synced (or when you apply the vault kustomization), will:
+This directory defines a **one-shot Job** that, when the **`vault-unseal`** Application (or full `cluster/vault` kustomization) syncs, will:
 
 1. Wait for Vault to be reachable.
 2. If Vault is **not initialized**: run `vault operator init`, store unseal keys and root token in the `vault-unseal-keys` secret, then unseal.
 3. If Vault is **initialized but sealed**: read keys from `vault-unseal-keys` and unseal.
 4. Ensure the `vault-root-token` secret exists (for the bootstrap job or other consumers).
 
-The Job is **idempotent**: safe to run multiple times. It is run automatically as an Argo CD **PostSync** hook when the vault-config Application syncs (so after Vault is deployed and the config overlay is applied).
+The Job is **idempotent**: safe to run multiple times. It is run automatically as an Argo CD **PostSync** hook when the **`vault-unseal`** Application syncs (after Vault is deployed).
 
 ## Namespace
 
-When deployed via `environments/dev/platform/vault-kustomization`, the kustomization sets `namespace: platform`. The Job and secrets live in **platform**; `VAULT_ADDR` and `VAULT_NS` are set so the Job talks to `vault.platform.svc:8200`.
+The base kustomization sets `namespace: platform`. Client overlays (e.g. threesixty **`vault-unseal`**) patch namespace and `VAULT_ADDR` to match where the Helm release runs (often **`platform-shared-resources`**).
 
 ## Secrets created
 
