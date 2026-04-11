@@ -1,0 +1,15 @@
+# JSON Patch (RFC 6902): prepend an init container before copyutil so
+# "ln -s ... argocd-cmp-server" does not fail with "File exists" on pod restart.
+# Keep cleanup init image aligned with the Argo CD version in install.yaml (stable).
+- op: add
+  path: /spec/template/spec/initContainers/0
+  value:
+    name: cleanup-cmp-server
+    image: quay.io/argoproj/argocd:v3.3.6
+    command:
+      - sh
+      - -c
+      - "rm -f /var/run/argocd/argocd-cmp-server"
+    volumeMounts:
+      - name: var-files
+        mountPath: /var/run/argocd
