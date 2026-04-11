@@ -1,11 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Ingress + VSO VaultConnection + auth delegator (no vault-unseal job). Mirrors client
+# Ingress + auth delegator (no vault-unseal job).
+# NOTE: VaultConnection is VSO namespace-scoped config and should be owned by the
+# vault-secrets-operator-config layer (to avoid ArgoCD SharedResourceWarning).
 # `vault-config` apps: reference //cluster/vault/vault-config?ref=…
 namespace: platform
 
 resources:
   - ingress.yaml
-  - vault-connection.yaml
   - vault-auth-delegator.yaml
