@@ -4,14 +4,23 @@ kind: Kustomization
 # Upstream install supplies all Argo CD workloads (Deployments, CRDs, etc.). Local
 # files layer ingress and ConfigMaps. Repo-server init patch avoids copyutil
 # CrashLoopBackOff when the cmp-server symlink already exists.
+namespace: argocd
 resources:
   - https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
   - ingress.yaml
-  - argocd-cm.yaml
-  - argocd-cmd-params-cm.yaml
-  - argocd-rbac-cm.yaml
 
 patches:
+  - path: applicationsets-crd-sync-options.patch.yaml
+    target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: applicationsets.argoproj.io
+
+  - path: argocd-cm.yaml
+  - path: argocd-cmd-params-cm.yaml
+  - path: argocd-rbac-cm.yaml
+
   - path: repo-server-copyutil-cleanup-init.patch.yaml
     target:
       group: apps
