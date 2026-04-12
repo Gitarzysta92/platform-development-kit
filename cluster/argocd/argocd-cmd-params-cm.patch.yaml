@@ -1,0 +1,13 @@
+# JSON Patch (RFC 6902) for ConfigMap/argocd-cmd-params-cm
+- op: add
+  path: /metadata/labels/app.kubernetes.io~1name
+  value: argocd-cmd-params-cm
+- op: add
+  path: /metadata/labels/app.kubernetes.io~1part-of
+  value: argocd
+- op: add
+  path: /data
+  value: {}
+- op: add
+  path: /data/reposerver.repo.cache.expiration
+  value: "5m"

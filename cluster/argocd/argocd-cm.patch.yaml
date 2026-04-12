@@ -1,0 +1,10 @@
+# JSON Patch (RFC 6902) for ConfigMap/argocd-cm
+- op: add
+  path: /metadata/labels/app.kubernetes.io~1name
+  value: argocd-cm
+- op: add
+  path: /metadata/labels/app.kubernetes.io~1part-of
+  value: argocd
+- op: add
+  path: /data/accounts.admin
+  value: apiKey,login

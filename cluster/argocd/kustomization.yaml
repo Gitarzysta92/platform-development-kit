@@ -17,9 +17,23 @@ patches:
       kind: CustomResourceDefinition
       name: applicationsets.argoproj.io
 
-  - path: argocd-cm.yaml
-  - path: argocd-cmd-params-cm.yaml
-  - path: argocd-rbac-cm.yaml
+  - path: argocd-cm.patch.yaml
+    target:
+      version: v1
+      kind: ConfigMap
+      name: argocd-cm
+
+  - path: argocd-cmd-params-cm.patch.yaml
+    target:
+      version: v1
+      kind: ConfigMap
+      name: argocd-cmd-params-cm
+
+  - path: argocd-rbac-cm.patch.yaml
+    target:
+      version: v1
+      kind: ConfigMap
+      name: argocd-rbac-cm
 
   - path: repo-server-copyutil-cleanup-init.patch.yaml
     target:
