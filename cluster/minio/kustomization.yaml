@@ -9,4 +9,3 @@ resources:
 
 # Note: MinIO is installed via Helm chart (minio/minio)
 # See .github/workflows/minio-provisioning.workflow.yml for installation
-

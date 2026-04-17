@@ -75,4 +75,3 @@ consoleIngress:
 metrics:
   serviceMonitor:
     enabled: false
-
