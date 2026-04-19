@@ -43,25 +43,34 @@ postgresql:
       enabled: true
       size: 8Gi
 
+# Public (end-user) ingress.
+# Env MUST override:
+#   - ingress.hostname                                       (per-env DNS name)
+#   - ingress.annotations."cert-manager.io/cluster-issuer"   (per-env TLS issuer)
+# Env MAY override:
+#   - ingress.annotations."nginx.ingress.kubernetes.io/app-root"
+#     (per-env default landing path, e.g. /admin/platform/console/)
+# Placeholder hostname uses example.invalid (RFC 2606) so an un-overridden
+# deploy fails loudly at DNS / cert-manager time instead of silently
+# shipping a dev hostname into a non-dev env.
 ingress:
   enabled: true
   ingressClassName: nginx
-  hostname: keycloak.dev.threesixty.dev
+  hostname: keycloak.example.invalid
   path: /
   pathType: Prefix
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
   tls: true
 
+# Admin ingress. Same override contract as `ingress` above.
 adminIngress:
   enabled: true
   ingressClassName: nginx
-  hostname: keycloak-admin.dev.threesixty.dev
+  hostname: keycloak-admin.example.invalid
   path: /
   pathType: Prefix
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
   tls: true
 
