@@ -1,21 +1,19 @@
 # OpenSearch Dashboards Helm Chart Values
 # Chart: opensearch-project/opensearch-dashboards
 # Docs: https://github.com/opensearch-project/helm-charts/tree/main/charts/opensearch-dashboards
-
-# OpenSearch connection
-# Note: OpenSearch service is configured with HTTP on port 9200
-# Service name: opensearch-cluster-master (from OpenSearch Helm chart global.masterService)
-opensearchHosts: "http://opensearch-cluster-master:9200"
-
-# Authentication
-# These can be overridden via --set parameters in ArgoCD application
-opensearchUsername: "admin"
-opensearchPassword: "changeme"
-
-# SSL/TLS configuration (uncomment if HTTPS is used)
-# opensearch:
-#   ssl:
-#     verificationMode: none
+#
+# Backend connection + credentials notes:
+# - `opensearchHosts` is intentionally NOT set here. The chart default
+#   is already `https://opensearch-cluster-master:9200` (TLS-on-by-default
+#   on the opensearch chart's HTTP endpoint), which is what we want.
+#   Consumer Argo Applications that need to override it (e.g. for a
+#   different masterService name) can do so via Helm `valuesObject`.
+# - The `opensearchUsername` / `opensearchPassword` keys were removed:
+#   they are not part of the `opensearch-dashboards` chart schema in
+#   appVersion >= 2.12, and setting them here has no effect. Backend
+#   credentials are injected by the consumer Argo Application via
+#   `extraEnvs` (OPENSEARCH_USERNAME / OPENSEARCH_PASSWORD) sourced
+#   from a Vault-backed K8s Secret — no static password lives in git.
 
 # Service configuration
 service:
