@@ -9,9 +9,14 @@ metadata:
     app.kubernetes.io/part-of: platform
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - mysql-adminer.host.placeholder
+      secretName: mysql-adminer-tls
   rules:
     - host: mysql-adminer.host.placeholder # Overridden by environment overlay
       http:
