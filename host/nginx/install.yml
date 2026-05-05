@@ -134,6 +134,7 @@
       - Node Exporter: http://metrics.{{ (base_domains | default([base_domain]))[0] }}
       - Cluster Services: https://any-service.{{ (base_domains | default([base_domain]))[0] }} (via ingress)
       - RabbitMQ AMQP: <host-ip>:5672 (TCP via nginx stream)
+      - SSH proxy: <host-ip>:{{ nginx_ssh_proxy_listen_port | default(2222) }} → 127.0.0.1:{{ nginx_ssh_proxy_nodeport | default(30222) }} (TCP stream; set NodePort on the cluster service to match)
       
       🔧 Configuration:
       - Environment: {{ target_env }}
