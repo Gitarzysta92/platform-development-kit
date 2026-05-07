@@ -42,15 +42,14 @@ stream {
     }
 
     # SSH gateway (ssh-workspace-proxy or similar) — TCP to the Service NodePort on loopback.
-    # Set the cluster Service nodePort to match nginx_ssh_proxy_nodeport (default 30222).
-    # Client: ssh -p {{ nginx_ssh_proxy_listen_port | default(2222) }} user@<host>
-    # Override: nginx_ssh_proxy_listen_port, nginx_ssh_proxy_nodeport (inventory / group_vars).
+    # Must match the cluster Service spec.ports[].nodePort (here 30222) and the host listen port you expose (2222).
+    # Client: ssh -p 2222 user@<host>
     upstream ssh_proxy_nodeport {
-        server 127.0.0.1:{{ nginx_ssh_proxy_nodeport | default(30222) }};
+        server 127.0.0.1:30222;
     }
 
     server {
-        listen {{ nginx_ssh_proxy_listen_port | default(2222) }};
+        listen 2222;
         proxy_pass ssh_proxy_nodeport;
         proxy_timeout 86400s;
         proxy_connect_timeout 10s;
