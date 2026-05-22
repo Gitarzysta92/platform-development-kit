@@ -10,9 +10,10 @@
     # When this PDK is used as a git submodule mounted at `platform/`,
     # the client repo root is one level above the submodule directory.
     client_repo_root: "{{ client_repo_root | default(playbook_dir | dirname | dirname | dirname) }}"
+    pdk_remote_work_dir: "/tmp/platform-development-kit"
+    pdk_remote_argocd_dir: "{{ pdk_remote_work_dir }}/cluster/argocd"
 
     apps_dir: "/opt/{{ platform_slug }}"
-    ansible_user: "{{ ansible_env.USER | default('root') }}"
     # Default TLS certificate paths used by host nginx vhosts (override if needed)
     nginx_ssl_certificate_path: "/etc/ssl/{{ platform_slug }}/fullchain.pem"
     nginx_ssl_certificate_key_path: "/etc/ssl/{{ platform_slug }}/private/privkey.pem"
@@ -29,34 +30,64 @@
     gitops_repo_username: "{{ gitops_repo_username | default('Gitarzysta92') }}"
 
   tasks:
+    - name: Normalize host provisioning environment
+      set_fact:
+        pdk_target_env: "{{ target_env | default('staging') }}"
+
+    - name: Set DNS labels for public hostnames
+      set_fact:
+        dns_env_label: "{{ dns_env_label | default(pdk_target_env) }}"
+
+    - name: Set public domain suffix
+      set_fact:
+        public_domain_suffix: "{{ public_domain_suffix | default(dns_env_label ~ '.' ~ base_domain) }}"
+
     - name: Display provisioning start
       debug:
         msg: |
           Starting host environment provisioning...
-          Environment: {{ target_env | default('staging') }}
+          Environment: {{ pdk_target_env }}
+          Public domain suffix: {{ public_domain_suffix }}
           Git SHA: {{ git_sha | default('main') }}
           Target directory: {{ apps_dir }}
 
     - name: Include system configuration
       include_tasks: system/configure.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
 
     - name: Include K3s installation
       include_tasks: k3s/install.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
 
     - name: Include MySQL installation
       include_tasks: mysql/install.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_host_mysql | default(false) | bool
 
     - name: Include MongoDB installation
       include_tasks: mongodb/install.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_host_mongodb | default(false) | bool
+
+    - name: Ensure PDK ArgoCD manifest staging directory exists
+      file:
+        path: "{{ pdk_remote_argocd_dir }}"
+        state: directory
+        mode: "0755"
+      when:
+        - install_argocd | default(false) | bool
+
+    - name: Stage PDK ArgoCD manifests on target host
+      copy:
+        src: "{{ playbook_dir }}/../cluster/argocd/"
+        dest: "{{ pdk_remote_argocd_dir }}/"
+        mode: preserve
+      when:
+        - install_argocd | default(false) | bool
 
     - name: Create ArgoCD namespace
-      shell: kubectl apply -f {{ playbook_dir }}/../cluster/argocd/namespace.yaml
+      shell: kubectl apply -f {{ pdk_remote_argocd_dir }}/namespace.yaml
       register: argocd_namespace
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_argocd | default(false) | bool
 
     - name: Install ArgoCD in cluster
       shell: |
@@ -64,7 +95,8 @@
         # (kubectl client-side apply stores the whole manifest in last-applied-configuration).
         kubectl apply --server-side --force-conflicts -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
       register: argocd_install
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_argocd | default(false) | bool
 
     - name: Wait for ArgoCD secrets to be created
       shell: |
@@ -82,28 +114,31 @@
       register: argocd_secrets_wait
       changed_when: false
       failed_when: false
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_argocd | default(false) | bool
 
     - name: Display ArgoCD pod status for debugging
       shell: kubectl get pods -n argocd -o wide
       register: argocd_pods_status
       changed_when: false
       failed_when: false
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_argocd | default(false) | bool
 
     - name: Check if ArgoCD service needs patching
       shell: kubectl -n argocd get svc argocd-server -o jsonpath='{.spec.type}'
       register: argocd_svc_type
       changed_when: false
       failed_when: false
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_argocd | default(false) | bool
 
     - name: Remove ArgoCD NodePorts (use ClusterIP + Ingress)
       shell: |
         kubectl -n argocd patch svc argocd-server --type='merge' -p '{"spec":{"type":"ClusterIP"}}'
       register: argocd_patch
       when: 
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - argocd_svc_type.stdout != 'ClusterIP'
         - argocd_svc_type.rc == 0
 
@@ -111,21 +146,34 @@
       shell: kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd
       register: argocd_wait
       changed_when: false
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_argocd | default(false) | bool
 
     - name: Apply ArgoCD configuration via kustomization
       shell: |
         # Apply ConfigMaps for argocd-cm (admin account capabilities) and argocd-rbac-cm (RBAC policy)
         # This is cleaner than patching ConfigMaps after installation
-        kubectl apply -k {{ playbook_dir }}/../cluster/argocd
+        kubectl apply --server-side --force-conflicts -k {{ pdk_remote_argocd_dir }}
       register: argocd_config
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_argocd | default(false) | bool
+
+    - name: Set ArgoCD ingress hostname
+      shell: |
+        kubectl -n argocd patch ingress argocd-ingress --type=json -p='[
+          {"op":"replace","path":"/spec/rules/0/host","value":"argocd.{{ public_domain_suffix }}"},
+          {"op":"replace","path":"/spec/tls/0/hosts/0","value":"argocd.{{ public_domain_suffix }}"}
+        ]'
+      register: argocd_ingress_hostname
+      when:
+        - install_argocd | default(false) | bool
+        - public_domain_suffix | length > 0
 
     - name: Restart ArgoCD server to apply configuration changes
       shell: kubectl rollout restart deployment/argocd-server -n argocd
       register: argocd_restart
       when: 
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - argocd_config is changed
 
     - name: Wait for ArgoCD server restart
@@ -133,7 +181,7 @@
       register: argocd_restart_wait
       changed_when: false
       when: 
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - argocd_restart is changed
 
     - name: Check if ArgoCD repository secret exists
@@ -142,7 +190,7 @@
       changed_when: false
       failed_when: false
       when: 
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - bootstrap_client_gitops | bool
         - git_token | default('') != ''
 
@@ -158,7 +206,7 @@
         kubectl label secret {{ gitops_repo_secret_name }} -n argocd argocd.argoproj.io/secret-type=repository --overwrite
       register: argocd_repo_secret
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - bootstrap_client_gitops | bool
         - git_token | default('') != ''
 
@@ -168,19 +216,23 @@
       changed_when: false
       failed_when: argocd_repo_secret_verify.stdout != 'repository'
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - bootstrap_client_gitops | bool
         - git_token | default('') != ''
 
     - name: Map environment name to directory
       set_fact:
-        env_dir: "{% if target_env | default('staging') == 'development' %}dev{% elif target_env | default('staging') == 'production' %}prod{% elif target_env | default('staging') == 'staging' %}dev{% else %}dev{% endif %}"
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+        env_dir: "{{ gitops_env_dir | default(target_env | default('staging')) }}"
+      when:
+        - install_argocd | default(false) | bool
+        - bootstrap_client_gitops | bool
 
     - name: Set ArgoCD overlay path
       set_fact:
         argocd_overlay_path: "{{ client_repo_root }}/environments/{{ env_dir }}/platform/argocd-kustomization"
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+      when:
+        - install_argocd | default(false) | bool
+        - bootstrap_client_gitops | bool
 
     - name: Apply ArgoCD ingress using Kustomize overlay
       shell: kubectl apply -k .
@@ -188,21 +240,21 @@
         chdir: "{{ argocd_overlay_path }}"
       register: argocd_ingress
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - bootstrap_client_gitops | bool
 
     - name: Apply ArgoCD AppProject (wapps-platform)
       shell: kubectl apply -f {{ client_repo_root }}/argocd/projects/platform-project.yaml
       register: argocd_project
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - bootstrap_client_gitops | bool
 
     - name: Apply ArgoCD App of Apps
       shell: kubectl apply -f {{ client_repo_root }}/argocd/app-of-apps.yaml
       register: app_of_apps
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
+        - install_argocd | default(false) | bool
         - bootstrap_client_gitops | bool
 
     - name: Wait for App of Apps application to be created
@@ -221,7 +273,6 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Display App of Apps status
@@ -230,14 +281,12 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Create RabbitMQ namespace
       shell: kubectl create namespace rabbitmq --dry-run=client -o yaml | kubectl apply -f -
       register: rabbitmq_namespace
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Create/Update RabbitMQ secrets
@@ -258,21 +307,18 @@
           --dry-run=client -o yaml | kubectl apply -f -
       register: rabbitmq_secrets
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Deploy RabbitMQ ArgoCD Application (Helm)
       shell: kubectl apply -f {{ client_repo_root }}/argocd/applications/platform/rabbitmq.yaml
       register: rabbitmq_app
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Deploy RabbitMQ Config ArgoCD Application (Ingress)
       shell: kubectl apply -f {{ client_repo_root }}/argocd/applications/platform/rabbitmq-config.yaml
       register: rabbitmq_config_app
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Wait for RabbitMQ applications to be created
@@ -292,7 +338,6 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Display RabbitMQ status
@@ -306,14 +351,12 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Create MinIO namespace
       shell: kubectl create namespace minio --dry-run=client -o yaml | kubectl apply -f -
       register: minio_namespace
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Check if MinIO secrets exist
@@ -322,7 +365,6 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Create MinIO secrets
@@ -342,7 +384,6 @@
           --dry-run=client -o yaml | kubectl apply -f -
       register: minio_secrets
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
         - minio_secret_check.stdout == "NOT_FOUND" or minio_secret_check.rc != 0
 
@@ -350,14 +391,12 @@
       shell: kubectl apply -f {{ client_repo_root }}/argocd/applications/platform/minio.yaml
       register: minio_app
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Deploy MinIO Config ArgoCD Application (Ingress)
       shell: kubectl apply -f {{ client_repo_root }}/argocd/applications/platform/minio-config.yaml
       register: minio_config_app
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Wait for MinIO applications to be created
@@ -377,7 +416,6 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Display MinIO status
@@ -391,14 +429,12 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Create OpenSearch namespace
       shell: kubectl create namespace opensearch --dry-run=client -o yaml | kubectl apply -f -
       register: opensearch_namespace
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Check if OpenSearch secrets exist
@@ -407,7 +443,6 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Create OpenSearch secrets
@@ -422,7 +457,6 @@
           --dry-run=client -o yaml | kubectl apply -f -
       register: opensearch_secrets
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
         - opensearch_secret_check.stdout == "NOT_FOUND" or opensearch_secret_check.rc != 0
 
@@ -430,21 +464,18 @@
       shell: kubectl apply -f {{ client_repo_root }}/argocd/applications/platform/opensearch.yaml
       register: opensearch_app
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Deploy OpenSearch Config ArgoCD Application (Ingress)
       shell: kubectl apply -f {{ client_repo_root }}/argocd/applications/platform/opensearch-config.yaml
       register: opensearch_config_app
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Deploy OpenSearch Dashboards ArgoCD Application (Helm)
       shell: kubectl apply -f {{ client_repo_root }}/argocd/applications/platform/opensearch-dashboards.yaml
       register: opensearch_dashboards_app
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Wait for OpenSearch applications to be created
@@ -465,7 +496,6 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Display OpenSearch status
@@ -482,34 +512,27 @@
       changed_when: false
       failed_when: false
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Include Node Exporter installation
       include_tasks: node-exporter/install.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
 
     - name: Include Tailscale installation
       include_tasks: tailscale/install.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
 
     - name: Include Ingress installation
       include_tasks: ingress/install.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
 
     - name: Include TLS certificate provisioning (Let's Encrypt / DNS-01)
       include_tasks: certificates/install.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
 
     - name: Include Nginx reverse proxy installation
       include_tasks: nginx/install.yml
-      when: target_env | default('staging') in ['development', 'staging', 'production']
 
     - name: Create aggregator namespace for applications
       shell: kubectl create namespace aggregator --dry-run=client -o yaml | kubectl apply -f -
       register: aggregator_namespace
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Check if GHCR secret exists in aggregator namespace
@@ -518,7 +541,6 @@
       changed_when: false
       failed_when: false
       when: 
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
         - git_token | default('') != ''
 
@@ -532,7 +554,6 @@
           --dry-run=client -o yaml | kubectl apply -f -
       register: ghcr_secret_aggregator
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
         - git_token | default('') != ''
         - ghcr_secret_check.stdout == "NOT_FOUND" or ghcr_secret_check.rc != 0
@@ -541,7 +562,6 @@
       shell: kubectl create namespace editorial --dry-run=client -o yaml | kubectl apply -f -
       register: editorial_namespace
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
 
     - name: Check if GHCR secret exists in editorial namespace
@@ -550,7 +570,6 @@
       changed_when: false
       failed_when: false
       when: 
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
         - git_token | default('') != ''
 
@@ -564,7 +583,6 @@
           --dry-run=client -o yaml | kubectl apply -f -
       register: ghcr_secret_editorial
       when:
-        - target_env | default('staging') in ['development', 'staging', 'production']
         - bootstrap_client_gitops | bool
         - git_token | default('') != ''
         - ghcr_secret_editorial_check.stdout == "NOT_FOUND" or ghcr_secret_editorial_check.rc != 0
@@ -572,8 +590,7 @@
     - name: Include DNS installation
       include_tasks: dns/install.yml
       vars:
-        target_ip: "{{ tailscale_ip.stdout | default(ansible_default_ipv4.address) }}"
-      when: target_env | default('staging') in ['development', 'staging', 'production']
+        target_ip: "{{ (tailscale_ip.stdout | default('') | trim) if ((tailscale_ip.stdout | default('') | trim) | length > 0) else ansible_default_ipv4.address }}"
 
 
 
@@ -584,28 +601,17 @@
           Environment: {{ target_env | default('staging') }}
           Git SHA: {{ git_sha | default('main') }}
           Applications directory: {{ apps_dir }}
-          Installed services:
-            - ArgoCD (Cluster) - GitOps CD
-            - ArgoCD Repository Credentials - Git access for private repos
-            - ArgoCD AppProject (wapps-platform) - Project configuration
-            - ArgoCD App of Apps - Application Management
-            - RabbitMQ (Platform) - Message Broker (Helm + Config)
-            - MinIO (Platform) - Object Storage (Helm + Config)
-            - OpenSearch (Platform) - Search Engine (Helm + Config)
-            - GitHub Actions Runner - CI/CD
+          Host services:
             - K3s (port 6443) - Kubernetes
             - Node Exporter (port 9100) - Metrics
             - Tailscale (port 41641) - VPN networking
             - Nginx (ports 80/443) - Reverse Proxy
             - NTP - Time synchronization
-            - GHCR Image Pull Secrets (aggregator, editorial namespaces)
-          
-          ArgoCD Applications Created:
-            - rabbitmq: Helm chart deployment
-            - rabbitmq-config: Ingress configuration overlay
-            - minio: Helm chart deployment
-            - minio-config: Ingress configuration overlay
-            - opensearch: Helm chart deployment
-            - opensearch-config: Ingress configuration overlay
-            - opensearch-dashboards: Helm chart deployment
+            - dnsmasq - Split DNS helper
+          GitOps bootstrap:
+            - ArgoCD install: {{ 'enabled' if install_argocd | default(false) | bool else 'disabled' }}
+            - Client app bootstrap: {{ 'enabled' if bootstrap_client_gitops | default(false) | bool else 'disabled' }}
+          Host database provisioning:
+            - MySQL: {{ 'enabled' if install_host_mysql | default(false) | bool else 'disabled' }}
+            - MongoDB: {{ 'enabled' if install_host_mongodb | default(false) | bool else 'disabled' }}
           Logs directory: {{ apps_dir }}/logs

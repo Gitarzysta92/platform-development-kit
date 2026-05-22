@@ -4,7 +4,7 @@ This directory contains documentation and reference manifests for accessing the 
 
 ## Overview
 
-MongoDB is **installed on the host machine** (not in the cluster). Kubernetes pods access it through a **Service with manual Endpoints** that points to the host IP.
+This is a legacy host-database integration pattern. MongoDB is **installed on the host machine** (not in the cluster). Kubernetes pods access it through a **Service with manual Endpoints** that points to the host IP.
 
 This mirrors the pattern used for `platform/cluster/mysql/`.
 
@@ -14,10 +14,11 @@ Pods connect to `mongodb.mongodb:27017` → `Service (ClusterIP)` → `Endpoints
 
 ## Installation
 
-MongoDB is installed/configured by the host provisioning playbook:
+MongoDB is not installed by default during host provisioning. To use this legacy path, opt in explicitly:
 
 - Host playbook: `platform/host/mongodb/install.yml`
 - Main playbook: `platform/host/main.yml`
+- Extra var: `install_host_mongodb=true`
 
 Secrets are sourced from GitHub Actions / Ansible vars:
 
@@ -33,4 +34,3 @@ Secrets are sourced from GitHub Actions / Ansible vars:
 - Secret: `mongodb-credentials` (namespace `mongodb`)
 
 See `external-service.yaml` for a reference manifest (Ansible creates these resources automatically).
-

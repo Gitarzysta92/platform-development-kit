@@ -80,5 +80,5 @@ address=/#/<TARGET_IPV4>
 
 ## Variables
 
-- `target_env` - Environment name (e.g., dev, staging, prod)
+- `target_env` - Free-form environment name (for example: dev, lab, preview42)
 - `target_ip` - IP address to resolve wildcard domains to

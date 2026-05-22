@@ -30,21 +30,23 @@
 
 - name: Set Tailscale hostname
   set_fact:
-    tailscale_device_name: "{{ target_env }}-wapps"
+    tailscale_device_name: "{{ tailscale_hostname | default(target_env ~ '-' ~ platform_slug) }}"
 
 - name: Authenticate Tailscale with auth key
   shell: tailscale up --authkey="{{ tailscale_auth_key }}" --hostname="{{ tailscale_device_name }}" --accept-dns=true
-  when: tailscale_auth_key is defined
+  when: (tailscale_auth_key | default('')) | length > 0
   register: tailscale_auth
   changed_when: tailscale_auth.rc == 0
+  failed_when: false
+  no_log: true
 
 - name: Display Tailscale authentication status
   debug:
     msg: |
-      Tailscale authentication {{ 'completed' if tailscale_auth_key is defined else 'skipped - no auth key provided' }}!
+      Tailscale authentication {{ 'completed' if (tailscale_auth is defined and tailscale_auth.rc == 0) else 'not completed - manual login needed' }}.
       Device hostname: {{ tailscale_device_name }}
       
-      {% if tailscale_auth_key is defined %}
+      {% if tailscale_auth is defined and tailscale_auth.rc == 0 %}
       After authentication, your services will be available at:
       - K3s API: https://{{ ansible_default_ipv4.address }}:6443 (or via Tailscale IP)
       - ArgoCD: https://{{ ansible_default_ipv4.address }}:443 (or via Tailscale IP)
@@ -54,7 +56,7 @@
       - {{ tailscale_device_name }}.tailnet-name.ts.net
       - {{ tailscale_device_name }}.ts.net (if MagicDNS is enabled)
       {% else %}
-      To authenticate manually, run: sudo tailscale up --hostname="{{ tailscale_device_name }}"
+      To authenticate manually, run: sudo tailscale up --hostname="{{ tailscale_device_name }}" --accept-dns=true
       {% endif %}
 
 - name: Configure Tailscale for K3s external access

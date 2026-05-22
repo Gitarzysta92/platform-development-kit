@@ -1,4 +1,8 @@
 ---
+- name: Set ingress public suffix default
+  set_fact:
+    ingress_public_suffix: "{{ tailscale_domain | default(public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ base_domain)) }}"
+
 - name: Install NGINX Ingress Controller
   shell: |
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
@@ -36,7 +40,7 @@
     spec:
       ingressClassName: nginx
       rules:
-      - host: k3s-api.{{ tailscale_domain | default((target_env | default('development')) ~ '-' ~ platform_slug ~ '.ts.net') }}
+      - host: k3s-api.{{ ingress_public_suffix }}
         http:
           paths:
           - path: /
@@ -60,7 +64,7 @@
     spec:
       ingressClassName: nginx
       rules:
-      - host: metrics.{{ tailscale_domain | default((target_env | default('development')) ~ '-' ~ platform_slug ~ '.ts.net') }}
+      - host: metrics.{{ ingress_public_suffix }}
         http:
           paths:
           - path: /
@@ -98,8 +102,8 @@
       Ingress controllers installed successfully!
       
       Ingress ingresses created:
-      - K3s API: k3s-api.\{\{ tailscale_domain | default((target_env | default('development')) ~ '-' ~ platform_slug ~ '.ts.net') }}
-      - Metrics: metrics.\{\{ tailscale_domain | default((target_env | default('development')) ~ '-' ~ platform_slug ~ '.ts.net') }}
+      - K3s API: k3s-api.{{ ingress_public_suffix }}
+      - Metrics: metrics.{{ ingress_public_suffix }}
       
       Note: ArgoCD ingress is managed separately via cluster/argocd/ingress.yaml
-      with hostname: argocd.<env>.{{ base_domain }} (applied during bootstrap)
+      with hostname: argocd.{{ ingress_public_suffix }} (applied during bootstrap)

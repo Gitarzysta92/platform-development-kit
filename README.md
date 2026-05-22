@@ -18,13 +18,21 @@ Important inputs (all can be passed via `-e`):
 - `platform_slug` (default `wapps`)
 - `base_domain` (default `wapps.ai`)
 - `base_domains` (optional) — list of base domains to expose (e.g. `["threesixty.dev","wapps.ai"]`). If set, host nginx + dnsmasq will generate rules for **all** of them. If omitted, it falls back to `base_domain`.
-- `target_env` (default `staging`)
+- `target_env` (default `staging`) — free-form environment name used by provisioning and generated hostnames.
+- `dns_env_label` (optional) — public DNS label. Defaults to `target_env`; override it only when the public hostname label must differ from the environment name.
+- `public_domain_suffix` (optional) — full public suffix for hostnames. Defaults to `{{ dns_env_label }}.{{ base_domain }}`, e.g. `lab.threesixty.dev`.
+- `gitops_env_dir` (optional) — environment directory name for legacy client GitOps bootstrap. Defaults to `target_env`.
+- `install_argocd` (default `false`) — legacy opt-in for installing Argo CD from the host playbook. In the target architecture, the client/orchestrator repo owns Argo CD bootstrap.
 - `bootstrap_client_gitops` (default `false`) — legacy behavior toggle; in the target architecture the *client repo* bootstraps its ArgoCD `AppProject`/`App-of-Apps`.
+- `install_host_mysql` (default `false`) — legacy opt-in for installing MySQL directly on the host.
+- `install_host_mongodb` (default `false`) — legacy opt-in for installing MongoDB directly on the host.
+
+Direct Argo CD and host database provisioning are disabled by default. Prefer client/orchestrator GitOps bootstrap plus cluster-managed or external database services for the normal platform stack.
 
 ### DNS options (host provisioning)
 There are two common DNS patterns:
 
-- **Local wildcard DNS (legacy / convenience)**: host runs dnsmasq locally (default `dnsmasq_port=5353`) and synthesizes `*.{{ target_env }}.<domain> -> <ip>` for each base domain.
+- **Local wildcard DNS (legacy / convenience)**: host runs dnsmasq locally (default `dnsmasq_port=5353`) and synthesizes `*.{{ dns_env_label }}.<domain> -> <ip>` for each base domain.
 - **Tailscale Split DNS (recommended when using tailnet DNS)**:
   - Tailscale admin console “Split DNS” routes your suffixes (e.g. `wapps.ai`, `threesixty.dev`) to a tailnet DNS server.
   - That DNS server can run dnsmasq in **answer-all** mode (no hardcoded domains in the dnsmasq config), typically on port 53.
@@ -164,4 +172,3 @@ Then apply the VSO example and confirm it creates a Kubernetes `Secret` in `argo
 If you want ArgoCD to sync from **private** GitHub repositories, ArgoCD needs a PAT-based repo connection (password auth is not supported).
 
 See `cluster/argocd/argo-github-integration.md`.
-

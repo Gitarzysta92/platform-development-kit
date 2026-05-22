@@ -5,6 +5,10 @@
     state: present
   when: ansible_os_family == "Debian"
 
+- name: Set nginx public suffix default
+  set_fact:
+    nginx_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domains | default([base_domain]))[0]) }}"
+
 - name: Install nginx (non-Debian)
   package:
     name: nginx
@@ -113,7 +117,7 @@
 
 - name: Test reverse proxy
   shell: |
-    curl -s -o /dev/null -w "%{http_code}" -H "Host: argocd.{{ (base_domains | default([base_domain]))[0] }}" http://127.0.0.1/ || echo "Failed"
+    curl -s -o /dev/null -w "%{http_code}" -H "Host: argocd.{{ nginx_public_suffix }}" http://127.0.0.1/ || echo "Failed"
   register: nginx_test_result
   changed_when: false
   failed_when: false
@@ -129,10 +133,10 @@
       ✅ Nginx reverse proxy configured successfully!
       
       🌐 Service URLs:
-      - ArgoCD: https://argocd.{{ (base_domains | default([base_domain]))[0] }}
-      - K3s API: https://k3s-api.{{ (base_domains | default([base_domain]))[0] }}
-      - Node Exporter: http://metrics.{{ (base_domains | default([base_domain]))[0] }}
-      - Cluster Services: https://any-service.{{ (base_domains | default([base_domain]))[0] }} (via ingress)
+      - ArgoCD: https://argocd.{{ nginx_public_suffix }}
+      - K3s API: https://k3s-api.{{ nginx_public_suffix }}
+      - Node Exporter: http://metrics.{{ nginx_public_suffix }}
+      - Cluster Services: https://any-service.{{ nginx_public_suffix }} (via ingress)
       - RabbitMQ AMQP: <host-ip>:5672 (TCP via nginx stream)
       - SSH proxy: <host-ip>:2222 → 127.0.0.1:30222 (TCP stream; cluster Service nodePort must be 30222)
       

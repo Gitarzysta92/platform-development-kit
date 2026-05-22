@@ -50,7 +50,7 @@ Once authenticated, your services will be available via:
 - **ArgoCD**: `https://argocd.<env>-wapps.ts.net`
 - **Node Exporter**: `http://metrics.<env>-wapps.ts.net:9100/metrics`
 
-Where `<env>` is your target environment (development, staging, production).
+Where `<env>` is your target environment name.
 
 ### 3. Configure Your Homelab
 

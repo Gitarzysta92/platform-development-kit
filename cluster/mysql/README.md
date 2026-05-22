@@ -4,7 +4,7 @@ This directory contains documentation and reference manifests for accessing the 
 
 ## Overview
 
-MySQL is **installed on the host machine** (not in the cluster) for better:
+This is a legacy host-database integration pattern. MySQL is **installed on the host machine** (not in the cluster) for:
 - ✅ Data persistence
 - ✅ Performance
 - ✅ Simplified backups
@@ -66,11 +66,12 @@ Kubernetes pods access the host MySQL through a **Service with manual Endpoints*
 
 ## Installation
 
-MySQL is automatically installed via Ansible during host provisioning:
+MySQL is not installed by default during host provisioning. To use this legacy path, opt in explicitly:
 
 ```bash
 ansible-playbook platform/host/main.yml \
   -e target_env=development \
+  -e install_host_mysql=true \
   -e mysql_root_password=SecureRootPassword \
   -e mysql_wapps_password=SecureWappsAppPassword \
   -e git_token=ghp_xxx

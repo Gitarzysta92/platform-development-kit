@@ -85,6 +85,23 @@
     timeout: 30
   when: mysql_config.changed
 
+- name: Set MySQL environment database labels
+  set_fact:
+    mysql_env_label: "{{ mysql_env_label | default(target_env | default('staging')) }}"
+    mysql_service_databases: >-
+      {{
+        mysql_service_databases
+        | default([
+            'editorial_' ~ (mysql_env_label | default(target_env | default('staging'))),
+            'catalog_' ~ (mysql_env_label | default(target_env | default('staging'))),
+            'discussion_' ~ (mysql_env_label | default(target_env | default('staging')))
+          ])
+      }}
+
+- name: Set MySQL service database privileges
+  set_fact:
+    mysql_service_db_privileges: "{{ mysql_service_databases | map('regex_replace', '$', '.*:ALL') | join('/') }}"
+
 # ==============================================
 # Database Creation (all services)
 # ==============================================
@@ -97,20 +114,7 @@
     login_unix_socket: /var/run/mysqld/mysqld.sock
     encoding: utf8mb4
     collation: utf8mb4_unicode_ci
-  loop:
-    # Editorial (Strapi CMS)
-    - editorial_dev
-    - editorial_staging
-    - editorial_prod
-    # Catalog BFF
-    - catalog_dev
-    - catalog_staging
-    - catalog_prod
-    # Discussion service
-    - discussion_dev
-    - discussion_staging
-    - discussion_prod
-    # Add more service databases here as needed
+  loop: "{{ mysql_service_databases }}"
   when: mysql_provision_service_dbs | default(false)
 
 # ==============================================
@@ -122,7 +126,7 @@
   mysql_user:
     name: wapps_app
     password: "{{ mysql_wapps_password | default('wapps_password') }}"
-    priv: 'editorial_dev.*:ALL/editorial_staging.*:ALL/editorial_prod.*:ALL/catalog_dev.*:ALL/catalog_staging.*:ALL/catalog_prod.*:ALL/discussion_dev.*:ALL/discussion_staging.*:ALL/discussion_prod.*:ALL'
+    priv: "{{ mysql_service_db_privileges }}"
     host: '%'
     state: present
     login_user: root
@@ -135,7 +139,7 @@
   mysql_user:
     name: wapps_app
     password: "{{ mysql_wapps_password | default('wapps_password') }}"
-    priv: 'editorial_dev.*:ALL/editorial_staging.*:ALL/editorial_prod.*:ALL/catalog_dev.*:ALL/catalog_staging.*:ALL/catalog_prod.*:ALL/discussion_dev.*:ALL/discussion_staging.*:ALL/discussion_prod.*:ALL'
+    priv: "{{ mysql_service_db_privileges }}"
     host: 'localhost'
     state: present
     login_user: root
@@ -264,7 +268,7 @@
 
 - name: Determine editorial database name based on environment
   set_fact:
-    editorial_db_name: "editorial_{% if target_env | default('staging') == 'development' %}dev{% elif target_env | default('staging') == 'production' %}prod{% else %}staging{% endif %}"
+    editorial_db_name: "{{ editorial_db_name | default('editorial_' ~ mysql_env_label) }}"
 
 - name: Create editorial database credentials secret
   shell: |
@@ -287,7 +291,7 @@
 
 - name: Determine catalog database name based on environment
   set_fact:
-    catalog_db_name: "catalog_{% if target_env | default('staging') == 'development' %}dev{% elif target_env | default('staging') == 'production' %}prod{% else %}staging{% endif %}"
+    catalog_db_name: "{{ catalog_db_name | default('catalog_' ~ mysql_env_label) }}"
 
 - name: Create catalog database credentials secret
   shell: |
@@ -354,8 +358,7 @@
       └─ Max Connections: 200
       
       📁 DATABASES CREATED:
-      ├─ editorial_dev, editorial_staging, editorial_prod
-      └─ catalog_dev, catalog_staging, catalog_prod
+      └─ {{ mysql_service_databases | join(', ') }}
       
       👤 SHARED DATABASE USER:
       ├─ Username: wapps_app
