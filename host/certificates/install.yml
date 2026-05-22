@@ -51,28 +51,6 @@
     - (cloudflare_api_token | default('')) | length == 0
     - (acme_dns_env_normalized is not defined) or (acme_dns_env_normalized | length == 0)
 
-- name: Sync Cloudflare API token for cert-manager (cloudflare-api-token-secret)
-  shell: |
-    set -euo pipefail
-    if ! command -v kubectl >/dev/null 2>&1; then
-      echo "kubectl not found; skipping cert-manager Cloudflare secret sync"
-      exit 0
-    fi
-
-    kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
-
-    kubectl -n cert-manager create secret generic cloudflare-api-token-secret \
-      --from-literal=api-token="{{ cloudflare_api_token }}" \
-      --dry-run=client -o yaml | kubectl apply -f -
-  args:
-    executable: /bin/bash
-  no_log: true
-  register: cert_manager_cloudflare_secret_sync
-  changed_when: false
-  failed_when: false
-  when:
-    - (cloudflare_api_token | default('')) | length > 0
-
 - name: Ensure platform system config directory exists
   file:
     path: "{{ platform_config_dir }}"

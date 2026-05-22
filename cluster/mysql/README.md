@@ -66,10 +66,10 @@ Kubernetes pods access the host MySQL through a **Service with manual Endpoints*
 
 ## Installation
 
-MySQL is not installed by default during host provisioning. To use this legacy path, opt in explicitly:
+MySQL is not part of `host/main.yml`. To use this legacy path, run the dedicated role from a purpose-built playbook in the owning repo:
 
 ```bash
-ansible-playbook platform/host/main.yml \
+ansible-playbook <client-playbook>.yml \
   -e target_env=development \
   -e install_host_mysql=true \
   -e mysql_root_password=SecureRootPassword \

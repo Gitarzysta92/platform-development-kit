@@ -7,12 +7,12 @@ This repo is intended to be consumed by *client/orchestrator* repositories (whic
 ## Contents
 
 - `cluster/`: Kustomize bases and Helm values for platform modules (e.g. ArgoCD config base, RabbitMQ, MinIO, OpenSearch, OPA, etc.).
-- `host/`: Host provisioning (Ansible) for a single-node K3s + ingress + optional host-level reverse proxy, certs, DNS helpers, etc.
+- `host/`: Host provisioning (Ansible) for the cluster-master host base: OS baseline, firewall, Node Exporter, Tailscale, host TLS, nginx, and DNS helpers.
 - Included cluster modules also cover a universal artifact repository via **Nexus Repository Manager OSS** (`cluster/nexus`).
 
 ## Host provisioning (Ansible)
 
-The main playbook is `host/main.yml`.
+The main playbook is `host/main.yml`. It is intentionally host-only: it does **not** install K3s, Argo CD, ingress-nginx, cluster applications, or in-cluster database resources. Those boundaries belong to the client/orchestrator repository, such as `threesixty-platform`.
 
 Important inputs (all can be passed via `-e`):
 - `platform_slug` (default `wapps`)
@@ -21,13 +21,13 @@ Important inputs (all can be passed via `-e`):
 - `target_env` (default `staging`) — free-form environment name used by provisioning and generated hostnames.
 - `dns_env_label` (optional) — public DNS label. Defaults to `target_env`; override it only when the public hostname label must differ from the environment name.
 - `public_domain_suffix` (optional) — full public suffix for hostnames. Defaults to `{{ dns_env_label }}.{{ base_domain }}`, e.g. `lab.threesixty.dev`.
-- `gitops_env_dir` (optional) — environment directory name for legacy client GitOps bootstrap. Defaults to `target_env`.
-- `install_argocd` (default `false`) — legacy opt-in for installing Argo CD from the host playbook. In the target architecture, the client/orchestrator repo owns Argo CD bootstrap.
-- `bootstrap_client_gitops` (default `false`) — legacy behavior toggle; in the target architecture the *client repo* bootstraps its ArgoCD `AppProject`/`App-of-Apps`.
-- `install_host_mysql` (default `false`) — legacy opt-in for installing MySQL directly on the host.
-- `install_host_mongodb` (default `false`) — legacy opt-in for installing MongoDB directly on the host.
+- `install_node_exporter` (default `true`)
+- `install_tailscale` (default `true`)
+- `install_host_certificates` (default `true`)
+- `install_host_nginx` (default `true`)
+- `install_host_dns` (default `true`)
 
-Direct Argo CD and host database provisioning are disabled by default. Prefer client/orchestrator GitOps bootstrap plus cluster-managed or external database services for the normal platform stack.
+Cluster bootstrap and cluster service installation are deliberately absent from `host/main.yml`. If a legacy role under `host/` still references Kubernetes, treat it as archival/manual tooling, not part of the PDK host base contract.
 
 ### DNS options (host provisioning)
 There are two common DNS patterns:

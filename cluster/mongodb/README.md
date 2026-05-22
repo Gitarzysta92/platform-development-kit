@@ -14,11 +14,10 @@ Pods connect to `mongodb.mongodb:27017` → `Service (ClusterIP)` → `Endpoints
 
 ## Installation
 
-MongoDB is not installed by default during host provisioning. To use this legacy path, opt in explicitly:
+MongoDB is not part of `host/main.yml`. To use this legacy path, run the dedicated role from a purpose-built playbook in the owning repo:
 
 - Host playbook: `platform/host/mongodb/install.yml`
-- Main playbook: `platform/host/main.yml`
-- Extra var: `install_host_mongodb=true`
+- Extra var, if your wrapper playbook uses one: `install_host_mongodb=true`
 
 Secrets are sourced from GitHub Actions / Ansible vars:
 
@@ -33,4 +32,4 @@ Secrets are sourced from GitHub Actions / Ansible vars:
 - Endpoints: `mongodb` → points to host IP on port 27017
 - Secret: `mongodb-credentials` (namespace `mongodb`)
 
-See `external-service.yaml` for a reference manifest (Ansible creates these resources automatically).
+See `external-service.yaml` for a reference manifest.

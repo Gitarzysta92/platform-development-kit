@@ -39,7 +39,7 @@
     append: yes
   when: initial_username is defined
 
-- name: Configure kernel parameters for K3s
+- name: Configure kernel parameters for cluster-master host workloads
   sysctl:
     name: "{{ item.name }}"
     value: "{{ item.value }}"
@@ -63,7 +63,7 @@
     - { type: 'soft', item: 'nproc', value: '32768' }
     - { type: 'hard', item: 'nproc', value: '32768' }
 
-- name: Disable swap for Kubernetes
+- name: Disable swap for cluster runtime compatibility
   shell: |
     swapoff -a
     sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
@@ -137,7 +137,7 @@
               notifempty
               create 644 root root
           }
-        dest: /etc/logrotate.d/wapps
+        dest: /etc/logrotate.d/{{ platform_slug }}-apps
         mode: '0644'
 
     - name: Configure system log rotation
@@ -171,7 +171,7 @@
       copy:
         content: |
           [Unit]
-          Description=WApps Host Services
+          Description={{ platform_slug }} Host Services
           After=network.target
 
           [Service]
@@ -184,16 +184,16 @@
 
           [Install]
           WantedBy=multi-user.target
-        dest: /etc/systemd/system/wapps-host.service
+        dest: /etc/systemd/system/{{ platform_slug }}-host.service
         mode: '0644'
 
     - name: Reload systemd daemon
       systemd:
         daemon_reload: yes
 
-    - name: Enable wapps-host service
+    - name: Enable platform host service
       systemd:
-        name: wapps-host
+        name: "{{ platform_slug }}-host"
         enabled: yes
         state: started
 
