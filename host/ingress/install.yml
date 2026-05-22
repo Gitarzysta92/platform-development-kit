@@ -53,47 +53,6 @@
     INGRESS_EOF
   register: k3s_ingress
 
-- name: Create Ingress for Node Exporter
-  shell: |
-    cat << 'INGRESS_EOF' | kubectl apply -f -
-    apiVersion: networking.k8s.io/v1
-    kind: Ingress
-    metadata:
-      name: metrics-ingress
-      namespace: default
-    spec:
-      ingressClassName: nginx
-      rules:
-      - host: metrics.{{ ingress_public_suffix }}
-        http:
-          paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: node-exporter
-                port:
-                  number: 9100
-    INGRESS_EOF
-  register: metrics_ingress
-
-- name: Create Node Exporter Service
-  shell: |
-    cat << 'SERVICE_EOF' | kubectl apply -f -
-    apiVersion: v1
-    kind: Service
-    metadata:
-      name: node-exporter
-      namespace: default
-    spec:
-      selector:
-        app: node-exporter
-      ports:
-      - port: 9100
-        targetPort: 9100
-    SERVICE_EOF
-  register: node_exporter_service
-
 # Note: ArgoCD ingress is managed by cluster/argocd/ingress.yaml (typically via client/orchestrator overlays).
 
 - name: Display Ingress Status
@@ -103,7 +62,6 @@
       
       Ingress ingresses created:
       - K3s API: k3s-api.{{ ingress_public_suffix }}
-      - Metrics: metrics.{{ ingress_public_suffix }}
       
       Note: ArgoCD ingress is managed separately via cluster/argocd/ingress.yaml
       with hostname: argocd.{{ ingress_public_suffix }} (applied during bootstrap)

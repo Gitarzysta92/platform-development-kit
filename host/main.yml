@@ -39,10 +39,6 @@
     - name: Include system configuration
       include_tasks: system/configure.yml
 
-    - name: Include Node Exporter installation
-      include_tasks: node-exporter/install.yml
-      when: install_node_exporter | default(true) | bool
-
     - name: Include Tailscale installation
       include_tasks: tailscale/install.yml
       when: install_tailscale | default(true) | bool
@@ -70,7 +66,6 @@
           Applications directory: {{ apps_dir }}
           Host services:
             - OS baseline and firewall
-            - Node Exporter: {{ 'enabled' if install_node_exporter | default(true) | bool else 'disabled' }}
             - Tailscale: {{ 'enabled' if install_tailscale | default(true) | bool else 'disabled' }}
             - Host TLS certificates: {{ 'enabled' if install_host_certificates | default(true) | bool else 'disabled' }}
             - Nginx reverse proxy: {{ 'enabled' if install_host_nginx | default(true) | bool else 'disabled' }}

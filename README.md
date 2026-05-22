@@ -7,7 +7,7 @@ This repo is intended to be consumed by *client/orchestrator* repositories (whic
 ## Contents
 
 - `cluster/`: Kustomize bases and Helm values for platform modules (e.g. ArgoCD config base, RabbitMQ, MinIO, OpenSearch, OPA, etc.).
-- `host/`: Host provisioning (Ansible) for the cluster-master host base: OS baseline, firewall, Node Exporter, Tailscale, host TLS, nginx, and DNS helpers.
+- `host/`: Host provisioning (Ansible) for the cluster-master host base: OS baseline, firewall, Tailscale, host TLS, nginx, and DNS helpers.
 - Included cluster modules also cover a universal artifact repository via **Nexus Repository Manager OSS** (`cluster/nexus`).
 
 ## Host provisioning (Ansible)
@@ -21,7 +21,6 @@ Important inputs (all can be passed via `-e`):
 - `target_env` (default `staging`) — free-form environment name used by provisioning and generated hostnames.
 - `dns_env_label` (optional) — public DNS label. Defaults to `target_env`; override it only when the public hostname label must differ from the environment name.
 - `public_domain_suffix` (optional) — full public suffix for hostnames. Defaults to `{{ dns_env_label }}.{{ base_domain }}`, e.g. `lab.threesixty.dev`.
-- `install_node_exporter` (default `true`)
 - `install_tailscale` (default `true`)
 - `install_host_certificates` (default `true`)
 - `install_host_nginx` (default `true`)

@@ -135,7 +135,6 @@
       🌐 Service URLs:
       - ArgoCD: https://argocd.{{ nginx_public_suffix }}
       - K3s API: https://k3s-api.{{ nginx_public_suffix }}
-      - Node Exporter: http://metrics.{{ nginx_public_suffix }}
       - Cluster Services: https://any-service.{{ nginx_public_suffix }} (via ingress)
       - RabbitMQ AMQP: <host-ip>:5672 (TCP via nginx stream)
       - SSH proxy: <host-ip>:2222 → 127.0.0.1:30222 (TCP stream; cluster Service nodePort must be 30222)

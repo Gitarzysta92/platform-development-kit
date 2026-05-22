@@ -64,7 +64,6 @@
       📍 Service URLs (all resolve to the same IP):
       - ArgoCD: https://argocd.{{ dns_public_suffix }}
       - K3s API: https://k3s-api.{{ dns_public_suffix }}
-      - Node Exporter: http://metrics.{{ dns_public_suffix }}
       - Grafana: https://grafana.{{ dns_public_suffix }}
       - Prometheus: https://prometheus.{{ dns_public_suffix }}
       - ANY service: https://anything.{{ dns_public_suffix }}
