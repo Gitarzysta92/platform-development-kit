@@ -6,7 +6,7 @@
 
 - name: Set DNS public suffix default
   set_fact:
-    dns_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domains | default([base_domain]))[0]) }}"
+    dns_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domain | default('wapps.ai'))) }}"
 
 # We don't need dnsmasq.d directory since we're using a single config file.
 

@@ -7,7 +7,7 @@
 
 - name: Set nginx public suffix default
   set_fact:
-    nginx_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domains | default([base_domain]))[0]) }}"
+    nginx_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domain | default('wapps.ai'))) }}"
 
 - name: Install nginx (non-Debian)
   package:

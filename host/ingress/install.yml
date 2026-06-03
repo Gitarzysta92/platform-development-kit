@@ -1,7 +1,7 @@
 ---
 - name: Set ingress public suffix default
   set_fact:
-    ingress_public_suffix: "{{ tailscale_domain | default(public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ base_domain)) }}"
+    ingress_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domain | default('wapps.ai'))) }}"
 
 - name: Install NGINX Ingress Controller
   shell: |
@@ -58,10 +58,9 @@
 - name: Display Ingress Status
   debug:
     msg: |
-      Ingress controllers installed successfully!
-      
-      Ingress ingresses created:
+      ingress-nginx front-door plumbing completed.
+
+      Ingress resources created:
       - K3s API: k3s-api.{{ ingress_public_suffix }}
-      
-      Note: ArgoCD ingress is managed separately via cluster/argocd/ingress.yaml
-      with hostname: argocd.{{ ingress_public_suffix }} (applied during bootstrap)
+
+      ArgoCD and platform application ingresses are managed separately by the GitOps workflow.

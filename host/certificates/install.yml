@@ -26,8 +26,12 @@
     dns_env_label: >-
       {{
         dns_env_label
-        | default(target_env | default('development'))
+        | default(target_env | default('staging'))
       }}
+
+- name: Set certificate public suffix default
+  set_fact:
+    public_domain_suffix: "{{ public_domain_suffix | default(dns_env_label ~ '.' ~ base_domain) }}"
 
 - name: Configure Cloudflare DNS provider when credentials are provided (from workflow extra-vars)
   set_fact:
@@ -117,20 +121,20 @@
     wapps_acme_domains: >-
       {{
         [
-          '*.' ~ dns_env_label ~ '.' ~ base_domain,
-          dns_env_label ~ '.' ~ base_domain
+          '*.' ~ public_domain_suffix,
+          public_domain_suffix
         ]
         + (
           enable_api_gateway_domain | default(wapps_enable_api_gateway_domain | default(true))
           | ternary(
               [
-                '*.api.' ~ dns_env_label ~ '.' ~ base_domain
+                '*.api.' ~ public_domain_suffix
               ],
               []
             )
         )
       }}
-    wapps_acme_main_domain: "{{ '*.' ~ dns_env_label ~ '.' ~ base_domain }}"
+    wapps_acme_main_domain: "{{ '*.' ~ public_domain_suffix }}"
 
 - name: Issue/renew LetsEncrypt certificate via DNS-01 (acme.sh)
   shell: |
@@ -168,7 +172,7 @@
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
       -keyout "{{ nginx_ssl_certificate_key_path }}" \
       -out "{{ nginx_ssl_certificate_path }}" \
-      -subj "/C=US/ST=State/L=City/O={{ platform_slug }} Homelab/CN={{ dns_env_label }}.{{ base_domain }}"
+      -subj "/C=US/ST=State/L=City/O={{ platform_slug }} Homelab/CN={{ public_domain_suffix }}"
     chmod 0600 "{{ nginx_ssl_certificate_key_path }}"
     chmod 0644 "{{ nginx_ssl_certificate_path }}"
   args:

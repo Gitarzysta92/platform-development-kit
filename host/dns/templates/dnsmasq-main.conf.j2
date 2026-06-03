@@ -15,15 +15,21 @@ log-queries
 log-dhcp
 log-facility=/var/log/dnsmasq.log
 
-{% set domains = base_domains | default([base_domain]) %}
-{% set env_label = dns_env_label | default(target_env) %}
+{% set explicit_public_suffix = pdk_public_domain_suffix_explicit | default((public_domain_suffix | default('') | length) > 0) %}
 
 # Only handle configured environment domains and subdomains.
 # This will resolve ANY subdomain under each suffix to the specified IP.
+{% if explicit_public_suffix | bool and public_domain_suffix is defined %}
+address=/{{ public_domain_suffix }}/{{ target_ip }}
+address=/*.{{ public_domain_suffix }}/{{ target_ip }}
+{% else %}
+{% set domains = base_domains | default([base_domain]) %}
+{% set env_label = dns_env_label | default(target_env) %}
 {% for domain in domains %}
 address=/{{ env_label }}.{{ domain }}/{{ target_ip }}
 address=/*.{{ env_label }}.{{ domain }}/{{ target_ip }}
 {% endfor %}
+{% endif %}
 
 # Forward other queries to upstream DNS
 no-resolv

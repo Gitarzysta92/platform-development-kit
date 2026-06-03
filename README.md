@@ -4,15 +4,22 @@ Reusable platform building blocks extracted from `wappsB/platform`.
 
 This repo is intended to be consumed by *client/orchestrator* repositories (which own `argocd/` and `environments/`) via **remote Kustomize bases** and/or by running the host provisioning playbooks directly.
 
+Repository boundary:
+- `threesixty-infrastructure` owns the VM/Proxmox layer: lifecycle, VM sizing, static IPs, disks/LVM, SSH access, and infrastructure observability.
+- `platform-development-kit` owns reusable host runtime setup: OS baseline/hardening, K3s server, ingress-nginx/front-door plumbing, Tailscale, DNS, and certificates.
+- `threesixty-platform` owns ArgoCD runtime bootstrap, platform GitOps applications, reset workflows, day-zero secrets, and verification.
+
 ## Contents
 
 - `cluster/`: Kustomize bases and Helm values for platform modules (e.g. ArgoCD config base, RabbitMQ, MinIO, OpenSearch, OPA, etc.).
-- `host/`: Host provisioning (Ansible) for the cluster-master host base: OS baseline, firewall, Tailscale, host TLS, nginx, and DNS helpers.
+- `host/`: Host provisioning (Ansible) for the cluster-master runtime: OS baseline, firewall, K3s, ingress-nginx front-door plumbing, Tailscale, host TLS, nginx, and DNS helpers.
 - Included cluster modules also cover a universal artifact repository via **Nexus Repository Manager OSS** (`cluster/nexus`).
 
 ## Host provisioning (Ansible)
 
-The main playbook is `host/main.yml`. It is intentionally host-only: it does **not** install K3s, Argo CD, ingress-nginx, cluster applications, or in-cluster database resources. Those boundaries belong to the client/orchestrator repository, such as `threesixty-platform`.
+The main playbook is `host/main.yml`. It installs the reusable host runtime needed before a GitOps platform bootstrap: OS baseline, K3s, ingress-nginx NodePorts, host nginx front-door routing, Tailscale, certificates, and DNS helpers.
+
+It does **not** install or bootstrap ArgoCD, platform GitOps applications, host MySQL, host MongoDB, node_exporter, or metrics exporters. Those remain absent from `host/main.yml` by default. If legacy/manual task files under `host/` reference those concerns, treat them as archival/manual tooling unless they are explicitly wired behind a false-by-default flag.
 
 Important inputs (all can be passed via `-e`):
 - `platform_slug` (default `wapps`)
@@ -21,12 +28,17 @@ Important inputs (all can be passed via `-e`):
 - `target_env` (default `staging`) — free-form environment name used by provisioning and generated hostnames.
 - `dns_env_label` (optional) — public DNS label. Defaults to `target_env`; override it only when the public hostname label must differ from the environment name.
 - `public_domain_suffix` (optional) — full public suffix for hostnames. Defaults to `{{ dns_env_label }}.{{ base_domain }}`, e.g. `lab.threesixty.dev`.
+- `install_system` (default `true`)
+- `install_k3s` (default `true`)
+- `install_ingress_controller` (default follows `install_k3s`)
 - `install_tailscale` (default `true`)
 - `install_host_certificates` (default `true`)
 - `install_host_nginx` (default `true`)
 - `install_host_dns` (default `true`)
 
-Cluster bootstrap and cluster service installation are deliberately absent from `host/main.yml`. If a legacy role under `host/` still references Kubernetes, treat it as archival/manual tooling, not part of the PDK host base contract.
+K3s is installed from `host/k3s/install.yml`. You may pin it with `k3s_version`, for example `-e k3s_version=v1.33.6+k3s1`. The server is installed with bundled Traefik disabled so `host/ingress/install.yml` can install ingress-nginx and patch its Service to NodePorts `32080` and `32443`. Host nginx keeps routing HTTP and HTTPS traffic to those NodePorts.
+
+Cluster bootstrap and cluster service installation are deliberately absent from `host/main.yml`. `threesixty-platform` should install ArgoCD and platform applications through its GitOps workflow after the PDK host runtime is ready.
 
 ### DNS options (host provisioning)
 There are two common DNS patterns:

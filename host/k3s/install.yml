@@ -11,6 +11,11 @@
     state: directory
     mode: '0755'
 
+- name: Check whether K3s is already installed
+  stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
 - name: Configure kubelet eviction and image GC guardrails
   copy:
     dest: /etc/rancher/k3s/config.yaml
@@ -23,12 +28,21 @@
         - "eviction-max-pod-grace-period=30"
         - "image-gc-high-threshold=75"
         - "image-gc-low-threshold=60"
+  register: k3s_config
 
 - name: Install K3s server
-  shell: INSTALL_K3S_EXEC="server --disable traefik" /tmp/k3s-install.sh --write-kubeconfig-mode 644
-  environment: "{{ {'INSTALL_K3S_VERSION': k3s_version} if (k3s_version | default('') | length > 0) else {} }}"
+  shell: /tmp/k3s-install.sh --write-kubeconfig-mode 644
+  environment: "{{ {'INSTALL_K3S_EXEC': 'server --disable traefik'} | combine({'INSTALL_K3S_VERSION': k3s_version} if (k3s_version | default('') | length > 0) else {}) }}"
   args:
     creates: /usr/local/bin/k3s
+
+- name: Restart K3s when guardrails changed on an existing install
+  systemd:
+    name: k3s
+    state: restarted
+  when:
+    - k3s_binary.stat.exists
+    - k3s_config.changed
 
 - name: Wait for K3s to be ready
   wait_for:
@@ -53,11 +67,13 @@
     group: "{{ ansible_user }}"
 
 - name: Copy kubeconfig to user directory
-  shell: |
-    cp /etc/rancher/k3s/k3s.yaml "{{ ansible_user_dir }}/.kube/config"
-    chown "{{ ansible_user }}:{{ ansible_user }}" "{{ ansible_user_dir }}/.kube/config"
-    chmod 600 "{{ ansible_user_dir }}/.kube/config"
-  become: yes
+  copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ ansible_user_dir }}/.kube/config"
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0600'
 
 # Keep kubeconfig pointing to localhost; access via host-level NGINX when remote
 
@@ -70,7 +86,7 @@
     creates: /usr/local/bin/kubectl
 
 - name: Verify K3s installation
-  shell: kubectl get nodes
+  command: kubectl get nodes
   register: k3s_status
   changed_when: false
 
