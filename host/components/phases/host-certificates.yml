@@ -1,0 +1,3 @@
+---
+- name: Include TLS certificate provisioning
+  include_tasks: ../../certificates/install.yml

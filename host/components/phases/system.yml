@@ -1,0 +1,3 @@
+---
+- name: Include system configuration
+  include_tasks: ../../system/configure.yml

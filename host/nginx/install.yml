@@ -9,6 +9,14 @@
   set_fact:
     nginx_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domain | default('wapps.ai'))) }}"
 
+- name: Set nginx upstream defaults
+  set_fact:
+    nginx_k3s_api_upstream: "{{ nginx_k3s_api_upstream | default('127.0.0.1:6443') }}"
+    nginx_ingress_http_upstream: "{{ nginx_ingress_http_upstream | default('127.0.0.1:32080') }}"
+    nginx_ingress_https_upstream: "{{ nginx_ingress_https_upstream | default('127.0.0.1:32443') }}"
+    nginx_rabbitmq_amqp_upstream: "{{ nginx_rabbitmq_amqp_upstream | default('127.0.0.1:30567') }}"
+    nginx_ssh_proxy_upstream: "{{ nginx_ssh_proxy_upstream | default('127.0.0.1:30222') }}"
+
 - name: Install nginx (non-Debian)
   package:
     name: nginx
@@ -137,7 +145,7 @@
       - K3s API: https://k3s-api.{{ nginx_public_suffix }}
       - Cluster Services: https://any-service.{{ nginx_public_suffix }} (via ingress)
       - RabbitMQ AMQP: <host-ip>:5672 (TCP via nginx stream)
-      - SSH proxy: <host-ip>:2222 → 127.0.0.1:30222 (TCP stream; cluster Service nodePort must be 30222)
+      - SSH proxy: <host-ip>:2222 → {{ nginx_ssh_proxy_upstream }} (TCP stream; cluster Service nodePort must be 30222)
       
       🔧 Configuration:
       - Environment: {{ target_env }}
@@ -146,6 +154,11 @@
       - TLS: passthrough on 443 (termination in ingress)
       - Port: 80 (HTTP proxy) and 443 (TCP passthrough)
       - Default routing: All unknown subdomains → Kubernetes cluster
+      - K3s API upstream: {{ nginx_k3s_api_upstream }}
+      - HTTP ingress upstream: {{ nginx_ingress_http_upstream }}
+      - HTTPS ingress upstream: {{ nginx_ingress_https_upstream }}
+      - RabbitMQ AMQP upstream: {{ nginx_rabbitmq_amqp_upstream }}
+      - SSH proxy upstream: {{ nginx_ssh_proxy_upstream }}
       
       📋 Notes:
       - HTTP redirects (if any) only point clients at ingress TLS

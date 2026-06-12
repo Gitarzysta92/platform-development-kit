@@ -4,7 +4,7 @@
 # The host playbook includes it at top level via: include /etc/nginx/stream.d/stream.conf;
 
 # RabbitMQ AMQP - TCP proxy via NodePort
-# External access: <host-ip>:5672 -> localhost:30567 (NodePort) -> rabbitmq.rabbitmq:5672
+# External access: <host-ip>:5672 -> {{ nginx_rabbitmq_amqp_upstream }} (NodePort) -> rabbitmq.rabbitmq:5672
 # The RabbitMQ service is patched to NodePort 30567 via kustomization overlay
 stream {
     # TLS passthrough on 443 (no host-level TLS termination).
@@ -14,10 +14,10 @@ stream {
     #
     map $ssl_preread_server_name $wapps_tls_upstream {
         # K3s API is TLS on 6443 (NOTE: the certificate presented is K3s' own).
-        ~^k3s-api\..+$ 127.0.0.1:6443;
+        ~^k3s-api\..+$ {{ nginx_k3s_api_upstream }};
 
         # Default: send all TLS to ingress-nginx HTTPS NodePort.
-        default         127.0.0.1:32443;
+        default         {{ nginx_ingress_https_upstream }};
     }
 
     server {
@@ -30,7 +30,7 @@ stream {
     }
 
     upstream rabbitmq_amqp {
-        server 127.0.0.1:30567;
+        server {{ nginx_rabbitmq_amqp_upstream }};
     }
 
     server {
@@ -45,7 +45,7 @@ stream {
     # Must match the cluster Service spec.ports[].nodePort (here 30222) and the host listen port you expose (2222).
     # Client: ssh -p 2222 user@<host>
     upstream ssh_proxy_nodeport {
-        server 127.0.0.1:30222;
+        server {{ nginx_ssh_proxy_upstream }};
     }
 
     server {
@@ -56,4 +56,3 @@ stream {
         error_log /var/log/nginx/ssh-proxy.error.log;
     }
 }
-

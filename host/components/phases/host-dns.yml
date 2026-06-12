@@ -1,0 +1,5 @@
+---
+- name: Include DNS installation
+  include_tasks: ../../dns/install.yml
+  vars:
+    target_ip: "{{ (tailscale_ip.stdout | default('') | trim) if ((tailscale_ip.stdout | default('') | trim) | length > 0) else ansible_default_ipv4.address }}"

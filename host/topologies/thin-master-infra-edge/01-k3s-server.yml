@@ -1,0 +1,23 @@
+---
+- name: Thin Master K3s Server Provisioning
+  hosts: "{{ pdk_k3s_server_target | default('k3s_server') }}"
+  become: yes
+  tasks:
+    - name: Include shared host defaults
+      include_tasks: ../../components/defaults.yml
+
+    - name: Display K3s server phase
+      debug:
+        msg: |
+          Starting thin-master K3s server phase...
+          Environment: {{ pdk_target_env }}
+          Public domain suffix: {{ public_domain_suffix }}
+
+    - name: Include K3s server installation
+      include_tasks: ../../components/phases/k3s-server.yml
+
+    - name: Display K3s server phase summary
+      debug:
+        msg: |
+          Thin-master K3s server phase completed.
+          Next: join infra and worker nodes as K3s agents, then run 02-ingress-controller.yml.
