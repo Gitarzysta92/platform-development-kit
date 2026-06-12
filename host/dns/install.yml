@@ -7,8 +7,36 @@
 - name: Set DNS public suffix default
   set_fact:
     dns_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domain | default('wapps.ai'))) }}"
+    dnsmasq_effective_port: "{{ dnsmasq_port | default((dnsmasq_address_all | default(false)) | ternary(53, 5353)) }}"
 
 # We don't need dnsmasq.d directory since we're using a single config file.
+
+- name: Install ufw for split-DNS firewall rules
+  package:
+    name: ufw
+    state: present
+  when:
+    - dnsmasq_manage_firewall | default(dnsmasq_address_all | default(false)) | bool
+
+- name: Allow split DNS UDP on Tailscale through firewall
+  ufw:
+    rule: allow
+    interface: "{{ dnsmasq_firewall_interface | default('tailscale0') }}"
+    direction: in
+    port: "{{ dnsmasq_effective_port }}"
+    proto: udp
+  when:
+    - dnsmasq_manage_firewall | default(dnsmasq_address_all | default(false)) | bool
+
+- name: Allow split DNS TCP on Tailscale through firewall
+  ufw:
+    rule: allow
+    interface: "{{ dnsmasq_firewall_interface | default('tailscale0') }}"
+    direction: in
+    port: "{{ dnsmasq_effective_port }}"
+    proto: tcp
+  when:
+    - dnsmasq_manage_firewall | default(dnsmasq_address_all | default(false)) | bool
 
 - name: Create dnsmasq configuration
   template:
@@ -33,7 +61,7 @@
 
 - name: Wait for dnsmasq to start
   wait_for:
-    port: "{{ dnsmasq_port | default((dnsmasq_address_all | default(false)) | ternary(53, 5353)) }}"
+    port: "{{ dnsmasq_effective_port }}"
     host: "127.0.0.1"
     timeout: 10
   ignore_errors: yes

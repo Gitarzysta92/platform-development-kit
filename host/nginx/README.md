@@ -40,6 +40,17 @@ nginx_rabbitmq_amqp_upstream: "127.0.0.1:30567"
 nginx_ssh_proxy_upstream: "127.0.0.1:30222"
 ```
 
+## Firewall
+
+The nginx installer owns firewall rules for the host-level ports it exposes:
+
+- `80/tcp` for HTTP
+- `443/tcp` for TLS passthrough
+- `2222/tcp` for the SSH proxy
+- `5672/tcp` for RabbitMQ AMQP
+
+Set `nginx_manage_firewall=false` if another layer owns nginx front-door firewall rules. Set `nginx_ssh_proxy_firewall_enabled=false` or `nginx_rabbitmq_amqp_firewall_enabled=false` to skip those optional TCP proxy ports.
+
 For a thin-master plus infra-edge layout, run host nginx on the infra K3s agent and point only the K3s API upstream at the control-plane node:
 
 ```yaml

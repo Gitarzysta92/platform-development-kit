@@ -8,6 +8,11 @@ This topology models each environment as:
 
 `threesixty-infrastructure` owns Proxmox VM lifecycle and guest OS preparation. PDK owns K3s server installation, ingress-nginx, Tailscale, host nginx, DNS, and certificates.
 
+Firewall ownership follows the same boundary:
+
+- `threesixty-infrastructure` should keep cluster internals such as SSH, flannel, kubelet, and K3s API access from agents to the server.
+- PDK opens ports for services it installs: Tailscale direct UDP, host nginx front-door/proxy ports, and split-DNS on `tailscale0`.
+
 Run phases in order:
 
 ```bash
@@ -43,3 +48,11 @@ nginx_ssh_proxy_upstream: "127.0.0.1:30222"
 dnsmasq_address_all: true
 dnsmasq_port: 53
 ```
+
+The infra-edge phase opens these PDK-owned firewall ports by default:
+
+- `41641/udp` for Tailscale direct connections
+- `80/tcp` and `443/tcp` for nginx front-door traffic
+- `2222/tcp` for the nginx SSH proxy
+- `5672/tcp` for the nginx RabbitMQ AMQP proxy
+- `53/udp` and `53/tcp` on `tailscale0` for dnsmasq Split DNS

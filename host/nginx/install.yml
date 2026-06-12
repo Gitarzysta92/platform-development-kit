@@ -23,6 +23,44 @@
     state: present
   when: ansible_os_family != "Debian"
 
+- name: Install ufw for nginx firewall rules
+  package:
+    name: ufw
+    state: present
+  when: nginx_manage_firewall | default(true) | bool
+
+- name: Allow nginx HTTP front door through firewall
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+  when: nginx_manage_firewall | default(true) | bool
+
+- name: Allow nginx TLS passthrough front door through firewall
+  ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+  when: nginx_manage_firewall | default(true) | bool
+
+- name: Allow nginx SSH proxy through firewall
+  ufw:
+    rule: allow
+    port: "2222"
+    proto: tcp
+  when:
+    - nginx_manage_firewall | default(true) | bool
+    - nginx_ssh_proxy_firewall_enabled | default(true) | bool
+
+- name: Allow nginx RabbitMQ AMQP proxy through firewall
+  ufw:
+    rule: allow
+    port: "5672"
+    proto: tcp
+  when:
+    - nginx_manage_firewall | default(true) | bool
+    - nginx_rabbitmq_amqp_firewall_enabled | default(true) | bool
+
 - name: Create nginx configuration directory
   file:
     path: /etc/nginx/sites-available
