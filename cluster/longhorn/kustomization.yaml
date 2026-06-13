@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: longhorn-system
+
+resources:
+  - namespace.yaml
+  - storageclass-rwo-2rep.yaml
+
+# Note: Longhorn is installed via Helm chart (longhorn/longhorn).
+# Use `cluster/longhorn/argo-application` to consume the reusable ArgoCD
+# Application with the pinned chart version and shared values file.

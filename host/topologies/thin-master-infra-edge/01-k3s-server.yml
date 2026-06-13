@@ -20,4 +20,4 @@
       debug:
         msg: |
           Thin-master K3s server phase completed.
-          Next: join infra and worker nodes as K3s agents, then run 02-ingress-controller.yml.
+          Next: run 02-join-agents.yml to join infra and worker nodes as K3s agents.

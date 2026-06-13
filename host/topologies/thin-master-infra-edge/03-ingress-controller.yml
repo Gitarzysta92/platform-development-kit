@@ -20,4 +20,4 @@
       debug:
         msg: |
           Ingress-nginx phase completed.
-          Next: run 03-infra-front-door.yml against the infra K3s agent.
+          Next: run 04-infra-front-door.yml against the infra K3s agent.

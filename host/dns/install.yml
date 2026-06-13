@@ -9,6 +9,30 @@
     dns_public_suffix: "{{ public_domain_suffix | default((dns_env_label | default(target_env | default('staging'))) ~ '.' ~ (base_domain | default('wapps.ai'))) }}"
     dnsmasq_effective_port: "{{ dnsmasq_port | default((dnsmasq_address_all | default(false)) | ternary(53, 5353)) }}"
 
+- name: Read Tailscale IP for split DNS target
+  command: tailscale ip -4
+  register: dnsmasq_tailscale_ip
+  changed_when: false
+  failed_when: false
+  when:
+    - dnsmasq_address_all | default(false) | bool
+    - (target_ip | default('') | string | length) == 0
+
+- name: Set split DNS target IP from Tailscale
+  set_fact:
+    target_ip: "{{ dnsmasq_tailscale_ip.stdout | trim }}"
+  when:
+    - dnsmasq_address_all | default(false) | bool
+    - (target_ip | default('') | string | length) == 0
+    - (dnsmasq_tailscale_ip.stdout | default('') | trim | length) > 0
+
+- name: Validate DNS target IP
+  assert:
+    that:
+      - (target_ip | default('') | string | length) > 0
+    fail_msg: "target_ip is required for dnsmasq answer-all mode. Authenticate Tailscale first or pass target_ip explicitly."
+  when: dnsmasq_address_all | default(false) | bool
+
 # We don't need dnsmasq.d directory since we're using a single config file.
 
 - name: Install ufw for split-DNS firewall rules

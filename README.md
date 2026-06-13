@@ -11,8 +11,8 @@ Repository boundary:
 
 ## Contents
 
-- `cluster/`: Kustomize bases and Helm values for platform modules (e.g. ArgoCD config base, RabbitMQ, MinIO, OpenSearch, OPA, etc.).
-- `host/`: Host provisioning (Ansible) for the cluster-master runtime: OS baseline, firewall, K3s, ingress-nginx front-door plumbing, Tailscale, host TLS, nginx, and DNS helpers.
+- `cluster/`: Kustomize bases and Helm values for platform modules (e.g. ArgoCD config base, RabbitMQ, MinIO, OpenSearch, Longhorn, OPA, etc.).
+- `host/`: Host provisioning (Ansible) for reusable K3s host runtime: OS baseline, firewall, K3s, ingress-nginx front-door plumbing, Tailscale, host TLS, nginx, and DNS helpers.
 - Included cluster modules also cover a universal artifact repository via **Nexus Repository Manager OSS** (`cluster/nexus`).
 
 ## Host provisioning (Ansible)

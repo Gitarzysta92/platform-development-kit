@@ -54,7 +54,7 @@ Set `nginx_manage_firewall=false` if another layer owns nginx front-door firewal
 For a thin-master plus infra-edge layout, run host nginx on the infra K3s agent and point only the K3s API upstream at the control-plane node:
 
 ```yaml
-nginx_k3s_api_upstream: "<cluster-master-ip>:6443"
+nginx_k3s_api_upstream: "<k3s-server-ip>:6443"
 nginx_ingress_http_upstream: "127.0.0.1:32080"
 nginx_ingress_https_upstream: "127.0.0.1:32443"
 nginx_rabbitmq_amqp_upstream: "127.0.0.1:30567"

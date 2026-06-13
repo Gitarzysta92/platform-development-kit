@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: longhorn-smoke
+  namespace: longhorn-smoke
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-rwo-2rep
+  resources:
+    requests:
+      storage: 1Gi

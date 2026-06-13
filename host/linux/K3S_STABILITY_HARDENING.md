@@ -56,10 +56,10 @@ Avoid placing CI-heavy runner pods on nodes hosting critical platform components
 Example:
 
 ```bash
-kubectl label node cluster-worker-2 workload=ci
-kubectl label node cluster-worker-3 workload=ci
-kubectl taint node cluster-worker-2 workload=ci:NoSchedule
-kubectl taint node cluster-worker-3 workload=ci:NoSchedule
+kubectl label node cluster-1-worker-2 workload=ci
+kubectl label node cluster-1-worker-3 workload=ci
+kubectl taint node cluster-1-worker-2 workload=ci:NoSchedule
+kubectl taint node cluster-1-worker-3 workload=ci:NoSchedule
 ```
 
 Then configure ARC workloads with matching `nodeSelector` and `tolerations` for `workload=ci`.

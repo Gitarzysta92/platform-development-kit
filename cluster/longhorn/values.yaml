@@ -1,0 +1,28 @@
+# Longhorn Helm Chart Values
+# Chart: longhorn/longhorn
+#
+# Initial lab policy:
+# - keep local-path as the cluster default StorageClass
+# - use the V1 data engine
+# - use two replicas for dev/lab validation
+# - create default disks only on nodes explicitly labeled with
+#   node.longhorn.io/create-default-disk=true
+
+defaultSettings:
+  createDefaultDiskLabeledNodes: "true"
+  defaultDataPath: /var/lib/longhorn
+  defaultReplicaCount: "2"
+  defaultDataLocality: disabled
+  v1DataEngine: "true"
+  v2DataEngine: "false"
+
+persistence:
+  createStorageClass: false
+  defaultClass: false
+  defaultClassReplicaCount: 2
+  defaultFsType: ext4
+  defaultDataLocality: disabled
+  reclaimPolicy: Delete
+
+preUpgradeChecker:
+  jobEnabled: false

@@ -39,7 +39,7 @@
     append: yes
   when: initial_username is defined
 
-- name: Configure kernel parameters for cluster-master host workloads
+- name: Configure kernel parameters for K3s host workloads
   sysctl:
     name: "{{ item.name }}"
     value: "{{ item.value }}"

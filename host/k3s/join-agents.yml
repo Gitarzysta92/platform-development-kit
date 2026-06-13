@@ -1,0 +1,169 @@
+---
+- name: Read K3s server join metadata
+  hosts: "{{ pdk_k3s_server_target | default('k3s_server') }}"
+  become: true
+  gather_facts: false
+  vars:
+    pdk_k3s_server_group: "{{ pdk_k3s_server_target | default('k3s_server') }}"
+    pdk_k3s_agent_group: "{{ pdk_k3s_agent_target | default('k3s_agents') }}"
+    pdk_k3s_server_hosts_effective: "{{ groups.get(pdk_k3s_server_group, [pdk_k3s_server_group]) }}"
+    pdk_k3s_agent_include_names_effective: "{{ pdk_k3s_agent_include_names | default(k3s_agent_include_names | default([])) }}"
+    pdk_k3s_agent_target_hosts: >-
+      {{
+        pdk_k3s_agent_include_names_effective
+        if (pdk_k3s_agent_include_names_effective | length > 0)
+        else (groups.get(pdk_k3s_agent_group, []))
+      }}
+  tasks:
+    - name: Validate K3s server and agent inventory groups
+      ansible.builtin.assert:
+        that:
+          - pdk_k3s_server_hosts_effective | length == 1
+          - pdk_k3s_agent_target_hosts | length > 0
+        fail_msg: "Inventory must define exactly one K3s server and one or more K3s agents."
+
+    - name: Verify K3s server token exists
+      ansible.builtin.stat:
+        path: /var/lib/rancher/k3s/server/node-token
+      register: k3s_server_token_file
+
+    - name: Fail when K3s server token is missing
+      ansible.builtin.assert:
+        that:
+          - k3s_server_token_file.stat.exists
+        fail_msg: "K3s server token not found. Install/start the K3s server before joining agents."
+
+    - name: Read K3s server token
+      ansible.builtin.slurp:
+        path: /var/lib/rancher/k3s/server/node-token
+      register: k3s_server_token_raw
+      no_log: true
+
+    - name: Read K3s server version
+      ansible.builtin.command: k3s --version
+      register: k3s_server_version_raw
+      changed_when: false
+
+    - name: Store K3s server connection facts
+      ansible.builtin.set_fact:
+        k3s_agent_token: "{{ k3s_server_token_raw.content | b64decode | trim }}"
+        k3s_server_url: "https://{{ k3s_api_host | default(ansible_host) }}:{{ k3s_api_port | default(6443) }}"
+        k3s_install_version: "{{ k3s_server_version_raw.stdout_lines[0].split()[2] }}"
+      no_log: true
+
+- name: Join K3s agent nodes
+  hosts: "{{ pdk_k3s_agent_target | default('k3s_agents') }}"
+  become: true
+  gather_facts: true
+  vars:
+    pdk_k3s_server_group: "{{ pdk_k3s_server_target | default('k3s_server') }}"
+    pdk_k3s_agent_group: "{{ pdk_k3s_agent_target | default('k3s_agents') }}"
+    pdk_k3s_server_hosts_effective: "{{ groups.get(pdk_k3s_server_group, [pdk_k3s_server_group]) }}"
+    pdk_k3s_agent_include_names_effective: "{{ pdk_k3s_agent_include_names | default(k3s_agent_include_names | default([])) }}"
+    pdk_k3s_agent_target_hosts: >-
+      {{
+        pdk_k3s_agent_include_names_effective
+        if (pdk_k3s_agent_include_names_effective | length > 0)
+        else (groups.get(pdk_k3s_agent_group, []))
+      }}
+    k3s_server_inventory_host: "{{ pdk_k3s_server_hosts_effective[0] }}"
+    k3s_server_url: "{{ hostvars[k3s_server_inventory_host].k3s_server_url }}"
+    k3s_agent_token: "{{ hostvars[k3s_server_inventory_host].k3s_agent_token }}"
+    k3s_install_version: "{{ hostvars[k3s_server_inventory_host].k3s_install_version }}"
+    k3s_agent_node_name: "{{ k3s_node_name | default(inventory_hostname) }}"
+    k3s_install_script_path: /tmp/install-k3s.sh
+  tasks:
+    - name: Skip agents outside the requested include list
+      ansible.builtin.meta: end_host
+      when: inventory_hostname not in pdk_k3s_agent_target_hosts
+
+    - name: Validate K3s agent install inputs
+      ansible.builtin.assert:
+        that:
+          - pdk_k3s_server_hosts_effective | length == 1
+          - k3s_server_url | length > 0
+          - k3s_agent_token | length > 0
+          - k3s_install_version | length > 0
+        fail_msg: "Inventory must define exactly one K3s server and one or more K3s agents."
+      no_log: true
+
+    - name: Check existing K3s agent service
+      ansible.builtin.command: systemctl is-active k3s-agent
+      register: k3s_agent_service
+      failed_when: false
+      changed_when: false
+
+    - name: Read existing K3s agent version
+      ansible.builtin.command: /usr/local/bin/k3s --version
+      register: k3s_agent_version_raw
+      failed_when: false
+      changed_when: false
+
+    - name: Resolve existing K3s agent version
+      ansible.builtin.set_fact:
+        k3s_agent_existing_version: >-
+          {{
+            k3s_agent_version_raw.stdout.split()[2]
+            if (k3s_agent_version_raw.rc == 0 and (k3s_agent_version_raw.stdout.split() | length) > 2)
+            else ''
+          }}
+
+    - name: Decide whether K3s agent install is needed
+      ansible.builtin.set_fact:
+        k3s_agent_install_needed: >-
+          {{
+            k3s_agent_service.rc != 0
+            or k3s_agent_existing_version != k3s_install_version
+          }}
+
+    - name: Download K3s install script
+      ansible.builtin.get_url:
+        url: https://get.k3s.io
+        dest: "{{ k3s_install_script_path }}"
+        mode: "0755"
+      when: k3s_agent_install_needed | bool
+
+    - name: Install K3s agent
+      ansible.builtin.command: "{{ k3s_install_script_path }}"
+      environment:
+        K3S_URL: "{{ k3s_server_url }}"
+        K3S_TOKEN: "{{ k3s_agent_token }}"
+        INSTALL_K3S_VERSION: "{{ k3s_install_version }}"
+        INSTALL_K3S_EXEC: "agent --node-name {{ k3s_agent_node_name }}"
+      register: k3s_agent_install
+      when: k3s_agent_install_needed | bool
+      no_log: true
+
+    - name: Ensure K3s agent service is enabled and running
+      ansible.builtin.systemd:
+        name: k3s-agent
+        enabled: true
+        state: started
+
+- name: Verify joined K3s agents
+  hosts: "{{ pdk_k3s_server_target | default('k3s_server') }}"
+  become: true
+  gather_facts: false
+  vars:
+    pdk_k3s_agent_group: "{{ pdk_k3s_agent_target | default('k3s_agents') }}"
+    pdk_k3s_agent_include_names_effective: "{{ pdk_k3s_agent_include_names | default(k3s_agent_include_names | default([])) }}"
+    pdk_k3s_agent_target_hosts: >-
+      {{
+        pdk_k3s_agent_include_names_effective
+        if (pdk_k3s_agent_include_names_effective | length > 0)
+        else (groups.get(pdk_k3s_agent_group, []))
+      }}
+  tasks:
+    - name: Wait for agent nodes to become Ready
+      ansible.builtin.command:
+        argv:
+          - k3s
+          - kubectl
+          - wait
+          - "node/{{ hostvars[item].k3s_node_name | default(item) }}"
+          - --for=condition=Ready
+          - --timeout=300s
+      loop: "{{ pdk_k3s_agent_target_hosts }}"
+      loop_control:
+        label: "{{ hostvars[item].k3s_node_name | default(item) }}"
+      changed_when: false

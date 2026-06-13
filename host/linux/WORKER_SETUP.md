@@ -11,7 +11,7 @@ This guide provisions a new K3s worker node from an Ubuntu base image/template.
 ## 1) Clone VM from template
 
 - Clone your base Ubuntu VM/template in Proxmox.
-- Give it a unique VM name (example: `cluster-worker-2`).
+- Give it a unique VM name (example: `cluster-1-worker-2`).
 - Start the VM.
 
 ## 2) Set unique hostname
@@ -19,15 +19,15 @@ This guide provisions a new K3s worker node from an Ubuntu base image/template.
 Run on the new worker VM:
 
 ```bash
-sudo hostnamectl set-hostname cluster-worker-5
-echo "cluster-worker-5" | sudo tee /etc/hostname
+sudo hostnamectl set-hostname cluster-1-worker-2
+echo "cluster-1-worker-2" | sudo tee /etc/hostname
 hostnamectl --static
 ```
 
 Optional but recommended (`/etc/hosts` consistency):
 
 ```bash
-echo "127.0.1.1 cluster-worker-5" | sudo tee -a /etc/hosts
+echo "127.0.1.1 cluster-1-worker-2" | sudo tee -a /etc/hosts
 ```
 
 ## 3) Ensure stable network identity
@@ -87,7 +87,7 @@ On control-plane:
 
 ```bash
 kubectl get nodes -o wide
-kubectl get node cluster-worker-2
+kubectl get node cluster-1-worker-2
 ```
 
 On worker:
@@ -118,7 +118,7 @@ sudo systemctl restart k3s-agent
 Validate:
 
 ```bash
-kubectl describe node cluster-worker-2 | grep -E "DiskPressure|Taints|Conditions"
+kubectl describe node cluster-1-worker-2 | grep -E "DiskPressure|Taints|Conditions"
 kubectl get events -A --sort-by=.lastTimestamp | grep -Ei "Evicted|DiskPressure|ephemeral-storage|InvalidDiskCapacity" | tail -n 40
 ```
 
@@ -140,5 +140,5 @@ Then run the install step again.
 - If needed, add a worker label:
 
 ```bash
-kubectl label node cluster-worker-2 node-role.kubernetes.io/worker=worker
+kubectl label node cluster-1-worker-2 node-role.kubernetes.io/worker=worker
 ```

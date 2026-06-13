@@ -14,7 +14,7 @@ This runbook covers a specific failure mode in K3s + flannel:
 
 ```bash
 kubectl -n platform run dns-test --restart=Never --image=busybox:1.36 \
-  --overrides='{"spec":{"nodeName":"cluster-worker-1"}}' \
+  --overrides='{"spec":{"nodeName":"cluster-1-worker-1"}}' \
   -- sh -c 'nslookup kubernetes.default.svc.cluster.local'
 ```
 
@@ -54,7 +54,7 @@ Re-test DNS from worker pod:
 
 ```bash
 kubectl -n platform run dns-direct-w1 --restart=Never --image=busybox:1.36 \
-  --overrides='{"spec":{"nodeName":"cluster-worker-1"}}' \
+  --overrides='{"spec":{"nodeName":"cluster-1-worker-1"}}' \
   -- sh -c 'nslookup kubernetes.default.svc.cluster.local 10.42.0.251'
 kubectl -n platform logs dns-direct-w1
 ```
