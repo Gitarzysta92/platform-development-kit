@@ -1,0 +1,62 @@
+---
+- name: Single Node K3s Host Provisioning
+  hosts: "{{ pdk_single_node_target | default('localhost') }}"
+  become: yes
+  tasks:
+    - name: Include shared host defaults
+      include_tasks: ../../components/defaults.yml
+
+    - name: Include phase flags
+      include_tasks: ../../components/phase-flags.yml
+
+    - name: Display provisioning start
+      debug:
+        msg: |
+          Starting single-node PDK host provisioning...
+          Environment: {{ pdk_target_env }}
+          Public domain suffix: {{ public_domain_suffix }}
+          Target directory: {{ apps_dir }}
+          Phases:
+            - System baseline: {{ 'enabled' if pdk_install_system | bool else 'disabled' }}
+            - K3s server: {{ 'enabled' if pdk_install_k3s | bool else 'disabled' }}
+            - ingress-nginx front-door: {{ 'enabled' if pdk_install_ingress_controller | bool else 'disabled' }}
+            - Tailscale: {{ 'enabled' if pdk_install_tailscale | bool else 'disabled' }}
+            - Host TLS certificates: {{ 'enabled' if pdk_install_host_certificates | bool else 'disabled' }}
+            - Host nginx: {{ 'enabled' if pdk_install_host_nginx | bool else 'disabled' }}
+            - Host DNS helper: {{ 'enabled' if pdk_install_host_dns | bool else 'disabled' }}
+
+    - name: Include system configuration
+      include_tasks: ../../components/phases/system.yml
+      when: pdk_install_system | bool
+
+    - name: Include K3s server installation
+      include_tasks: ../../components/phases/k3s-server.yml
+      when: pdk_install_k3s | bool
+
+    - name: Include ingress-nginx front-door installation
+      include_tasks: ../../components/phases/ingress-controller.yml
+      when: pdk_install_ingress_controller | bool
+
+    - name: Include Tailscale installation
+      include_tasks: ../../components/phases/tailscale.yml
+      when: pdk_install_tailscale | bool
+
+    - name: Include TLS certificate provisioning
+      include_tasks: ../../components/phases/host-certificates.yml
+      when: pdk_install_host_certificates | bool
+
+    - name: Include Nginx reverse proxy installation
+      include_tasks: ../../components/phases/host-nginx.yml
+      when: pdk_install_host_nginx | bool
+
+    - name: Include DNS installation
+      include_tasks: ../../components/phases/host-dns.yml
+      when: pdk_install_host_dns | bool
+
+    - name: Display provisioning summary
+      debug:
+        msg: |
+          Single-node PDK host provisioning completed.
+          Environment: {{ pdk_target_env }}
+          Public domain suffix: {{ public_domain_suffix }}
+          Applications directory: {{ apps_dir }}

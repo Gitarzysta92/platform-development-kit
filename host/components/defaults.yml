@@ -1,0 +1,29 @@
+---
+- name: Set PDK platform defaults
+  set_fact:
+    platform_slug: "{{ platform_slug | default('wapps') }}"
+    base_domain: "{{ base_domain | default('wapps.ai') }}"
+    apps_dir: "{{ apps_dir | default('/opt/' ~ (platform_slug | default('wapps'))) }}"
+    nginx_ssl_certificate_path: "{{ nginx_ssl_certificate_path | default('/etc/ssl/' ~ (platform_slug | default('wapps')) ~ '/fullchain.pem') }}"
+    nginx_ssl_certificate_key_path: "{{ nginx_ssl_certificate_key_path | default('/etc/ssl/' ~ (platform_slug | default('wapps')) ~ '/private/privkey.pem') }}"
+    enable_api_gateway_domain: "{{ enable_api_gateway_domain | default(wapps_enable_api_gateway_domain | default(true)) }}"
+
+- name: Normalize host provisioning environment
+  set_fact:
+    pdk_target_env: "{{ target_env | default('staging') }}"
+
+- name: Set target environment default
+  set_fact:
+    target_env: "{{ pdk_target_env }}"
+
+- name: Set DNS labels for public hostnames
+  set_fact:
+    dns_env_label: "{{ dns_env_label | default(pdk_target_env) }}"
+
+- name: Track explicit public domain suffix
+  set_fact:
+    pdk_public_domain_suffix_explicit: "{{ (public_domain_suffix | default('') | string | length) > 0 }}"
+
+- name: Set public domain suffix
+  set_fact:
+    public_domain_suffix: "{{ public_domain_suffix | default(dns_env_label ~ '.' ~ base_domain) }}"

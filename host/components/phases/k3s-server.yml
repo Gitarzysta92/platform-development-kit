@@ -1,0 +1,3 @@
+---
+- name: Include K3s server installation
+  include_tasks: ../../k3s/install.yml

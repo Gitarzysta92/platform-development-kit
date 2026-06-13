@@ -5,9 +5,11 @@ This role joins the host to Tailscale so host-level services can be reached from
 ## What's Configured
 
 - Tailscale installation with automatic startup
-- Firewall rules for Tailscale traffic
+- Firewall rule for Tailscale direct UDP traffic (`41641/udp`)
 - Hostname generation from `tailscale_hostname` or `{{ target_env }}-{{ platform_slug }}`
 - Tailscale IP discovery for host DNS helper tasks
+
+Set `tailscale_manage_firewall=false` if another layer owns the Tailscale firewall rule.
 
 ## Authentication
 

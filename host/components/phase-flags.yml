@@ -1,0 +1,10 @@
+---
+- name: Normalize host provisioning phases
+  set_fact:
+    pdk_install_system: "{{ install_system | default(true) | bool }}"
+    pdk_install_k3s: "{{ install_k3s | default(true) | bool }}"
+    pdk_install_ingress_controller: "{{ install_ingress_controller | default(install_k3s | default(true)) | bool }}"
+    pdk_install_tailscale: "{{ install_tailscale | default(true) | bool }}"
+    pdk_install_host_certificates: "{{ install_host_certificates | default(true) | bool }}"
+    pdk_install_host_nginx: "{{ install_host_nginx | default(true) | bool }}"
+    pdk_install_host_dns: "{{ install_host_dns | default(true) | bool }}"

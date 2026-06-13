@@ -210,32 +210,8 @@
         port: "22"
         proto: tcp
 
-    - name: Allow HTTP
-      ufw:
-        rule: allow
-        port: "80"
-        proto: tcp
-
-    - name: Allow HTTPS
-      ufw:
-        rule: allow
-        port: "443"
-        proto: tcp
-
-    # Do not expose Kubernetes API, ingress NodePorts, or metrics directly
-    # Access is provided via host-level NGINX reverse proxy on 80/443
-
-    - name: Allow Tailscale
-      ufw:
-        rule: allow
-        port: "41641"
-        proto: udp
-
-    - name: Allow Tailscale outbound
-      ufw:
-        rule: allow
-        port: "41641"
-        proto: tcp
+    # Service-specific ports are opened by the components that install them.
+    # Do not expose Kubernetes API, ingress NodePorts, or metrics directly.
 
     - name: Enable UFW
       ufw:

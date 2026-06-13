@@ -1,0 +1,23 @@
+---
+- name: Thin Master Ingress Controller Provisioning
+  hosts: "{{ pdk_k3s_server_target | default('k3s_server') }}"
+  become: yes
+  tasks:
+    - name: Include shared host defaults
+      include_tasks: ../../components/defaults.yml
+
+    - name: Display ingress controller phase
+      debug:
+        msg: |
+          Starting ingress-nginx phase on the K3s server...
+          Environment: {{ pdk_target_env }}
+          Public domain suffix: {{ public_domain_suffix }}
+
+    - name: Include ingress-nginx front-door installation
+      include_tasks: ../../components/phases/ingress-controller.yml
+
+    - name: Display ingress controller phase summary
+      debug:
+        msg: |
+          Ingress-nginx phase completed.
+          Next: run 03-infra-front-door.yml against the infra K3s agent.

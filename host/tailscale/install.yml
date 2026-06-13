@@ -5,6 +5,19 @@
   register: tailscale_install
   changed_when: tailscale_install.rc == 0
 
+- name: Install ufw for Tailscale firewall rules
+  package:
+    name: ufw
+    state: present
+  when: tailscale_manage_firewall | default(true) | bool
+
+- name: Allow Tailscale direct traffic through firewall
+  ufw:
+    rule: allow
+    port: "41641"
+    proto: udp
+  when: tailscale_manage_firewall | default(true) | bool
+
 - name: Start Tailscale daemon
   systemd:
     name: tailscaled

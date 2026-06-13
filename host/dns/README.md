@@ -64,6 +64,11 @@ Select the mode using `dnsmasq_address_all`:
   - answers *every* query it receives with `target_ip`
   - intended to run as the DNS server behind Tailscale Split DNS (so it only receives queries for your split zones)
   - typical port: `dnsmasq_port=53`
+  - opens `udp/tcp` DNS only on `tailscale0` by default
+
+### Firewall
+
+The DNS installer opens split-DNS firewall rules only when `dnsmasq_address_all=true` by default. It allows `udp/tcp` on `dnsmasq_port` through `dnsmasq_firewall_interface` (`tailscale0` by default). Set `dnsmasq_manage_firewall=false` if another layer owns DNS firewall rules.
 
 ### Manual config snippet (Split DNS nameserver)
 If you want to configure the Split DNS nameserver manually (outside Ansible), the minimal config is:

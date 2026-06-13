@@ -1,0 +1,3 @@
+---
+- name: Include ingress-nginx front-door installation
+  include_tasks: ../../ingress/install.yml

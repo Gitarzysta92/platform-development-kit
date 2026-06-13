@@ -1,0 +1,56 @@
+---
+- name: Thin Master Infra Edge Front Door Provisioning
+  hosts: "{{ pdk_k3s_infra_target | default('k3s_infra') }}"
+  become: yes
+  tasks:
+    - name: Include shared host defaults
+      include_tasks: ../../components/defaults.yml
+
+    - name: Resolve K3s server inventory host
+      set_fact:
+        pdk_k3s_server_group: "{{ pdk_k3s_server_target | default('k3s_server') }}"
+        pdk_k3s_server_inventory_host: "{{ pdk_k3s_server_host | default((groups[pdk_k3s_server_target | default('k3s_server')] | default([pdk_k3s_server_target | default('k3s_server')]))[0]) }}"
+
+    - name: Resolve K3s server address
+      set_fact:
+        pdk_k3s_server_address: "{{ pdk_k3s_server_address | default(hostvars[pdk_k3s_server_inventory_host].ansible_host | default(pdk_k3s_server_inventory_host)) }}"
+      when: nginx_k3s_api_upstream is not defined
+
+    - name: Resolve infra-edge upstream defaults
+      set_fact:
+        nginx_k3s_api_upstream: "{{ nginx_k3s_api_upstream if nginx_k3s_api_upstream is defined else pdk_k3s_server_address ~ ':6443' }}"
+        nginx_ingress_http_upstream: "{{ nginx_ingress_http_upstream | default('127.0.0.1:32080') }}"
+        nginx_ingress_https_upstream: "{{ nginx_ingress_https_upstream | default('127.0.0.1:32443') }}"
+        nginx_rabbitmq_amqp_upstream: "{{ nginx_rabbitmq_amqp_upstream | default('127.0.0.1:30567') }}"
+        nginx_ssh_proxy_upstream: "{{ nginx_ssh_proxy_upstream | default('127.0.0.1:30222') }}"
+        dnsmasq_address_all: "{{ dnsmasq_address_all | default(true) | bool }}"
+        dnsmasq_port: "{{ dnsmasq_port | default(53) }}"
+
+    - name: Display infra-edge front-door phase
+      debug:
+        msg: |
+          Starting infra-edge front-door phase...
+          Environment: {{ pdk_target_env }}
+          Public domain suffix: {{ public_domain_suffix }}
+          K3s API upstream: {{ nginx_k3s_api_upstream }}
+          Ingress HTTP upstream: {{ nginx_ingress_http_upstream }}
+          Ingress HTTPS upstream: {{ nginx_ingress_https_upstream }}
+
+    - name: Include Tailscale installation
+      include_tasks: ../../components/phases/tailscale.yml
+
+    - name: Include TLS certificate provisioning
+      include_tasks: ../../components/phases/host-certificates.yml
+
+    - name: Include Nginx reverse proxy installation
+      include_tasks: ../../components/phases/host-nginx.yml
+
+    - name: Include DNS installation
+      include_tasks: ../../components/phases/host-dns.yml
+
+    - name: Display infra-edge front-door phase summary
+      debug:
+        msg: |
+          Infra-edge front-door phase completed.
+          DNS answer-all: {{ dnsmasq_address_all }}
+          DNS port: {{ dnsmasq_port }}
